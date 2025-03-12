@@ -54,56 +54,56 @@ const Events = () => {
       label: 'Create Event', 
       gradient: 'from-[#A020F0] to-[#CCFF00]',
       bgColor: 'bg-[#1A472E]',
-      icon: <img src="/src/create.png" alt="Create Event" className="w-12 h-12" />
+      icon: <img src="/create.png" alt="Create Event" className="w-12 h-12" />
     },
     { 
       id: 'all', 
       label: 'All Events', 
       gradient: 'from-[#A020F0] to-[#CCFF00]',
       bgColor: 'bg-[#2A1F0E]',
-      icon: <img src="/src/bantahblue.svg" alt="Create Event" className="w-10 h-10" />
+      icon: <img src="/bantahblue.svg" alt="Create Event" className="w-10 h-10" />
     },
     { 
       id: 'pop culture', 
       label: 'Pop Culture', 
       gradient: 'from-[#A020F0] to-[#CCFF00]',
       bgColor: 'bg-[#2A1F0E]',
-      icon: <img src="/src/popcorn.svg" alt="Create Event" className="w-11 h-11" />
+      icon: <img src="/popcorn.svg" alt="Create Event" className="w-11 h-11" />
     },
     { 
       id: 'sports', 
       label: 'Sports', 
       gradient: 'from-[#A020F0] to-[#CCFF00]',
       bgColor: 'bg-[#2A1215]',
-      icon: <img src="/src/footballicon.png" alt="Create Event" className="w-12 h-12" />
+      icon: <img src="/footballicon.png" alt="Create Event" className="w-12 h-12" />
     },
     { 
       id: 'music', 
       label: 'Music', 
       gradient: 'from-[#A020F0] to-[#CCFF00]',
       bgColor: 'bg-[#1F1435]',
-      icon: <img src="/src/dj setup.png" alt="Create Event" className="w-12 h-12" />
+      icon: <img src="/dj setup.png" alt="Create Event" className="w-12 h-12" />
     },
     { 
       id: 'gaming', 
       label: 'Gaming', 
       gradient: 'from-[#A020F0] to-[#CCFF00]',
       bgColor: 'bg-[#1A472E]',
-      icon: <img src="/src/22gamepad.svg" alt="Create Event" className="w-12 h-12" />
+      icon: <img src="/22gamepad.svg" alt="Create Event" className="w-12 h-12" />
     },
     { 
       id: 'crypto', 
       label: 'Crypto', 
       gradient: 'from-[#A020F0] to-[#CCFF00]',
       bgColor: 'bg-[#FFA620FF]',
-      icon: <img src="/src/bitcoin.svg" alt="Create Event" className="w-12 h-12" />
+      icon: <img src="/bitcoin.svg" alt="Create Event" className="w-12 h-12" />
     },
     { 
       id: 'politics', 
       label: 'Politics', 
       gradient: 'from-[#A020F0] to-[#CCFF00]',
       bgColor: 'bg-light-bg',
-      icon: <img src="/src/politics.png" alt="Create Event" className="w-9 h-10" />
+      icon: <img src="/politics.png" alt="Create Event" className="w-9 h-10" />
     }
   ];
 
