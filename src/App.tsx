@@ -37,15 +37,15 @@ const App: React.FC = () => {
   const isAuthPage = ['/signin', '/admin/signin'].includes(location.pathname);
 
   return (
-    <SettingsProvider>
-      <SplashScreenProvider>
-        <ToastProvider>
-          <AuthProvider>
-            <WalletProvider>
-              <SocketProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <WalletProvider>
+          <SocketProvider>
+            <SettingsProvider>
+              <SplashScreenProvider>
                 <div className="flex">
                   {!isAuthPage && <DesktopNav />}
-                  <main className={`${!isAuthPage ? 'lg:ml-[240px]' : ''} w-full min-h-screen`}>
+                  <main className="flex-1">
                     <Routes>
                       {/* Public routes */}
                       <Route path="/signin" element={<SignIn />} />
@@ -145,12 +145,12 @@ const App: React.FC = () => {
                     <PWAInstallPrompt />
                   </main>
                 </div>
-              </SocketProvider>
-            </WalletProvider>
-          </AuthProvider>
-        </ToastProvider>
-      </SplashScreenProvider>
-    </SettingsProvider>
+              </SplashScreenProvider>
+            </SettingsProvider>
+          </SocketProvider>
+        </WalletProvider>
+      </AuthProvider>
+    </ToastProvider>
   );
 };
 

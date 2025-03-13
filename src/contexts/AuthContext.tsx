@@ -1,26 +1,20 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useToast } from './ToastContext';
-import { User as SupabaseUser } from '@supabase/supabase-js';
-
-interface User {
-  id: string;
-  name?: string;
-  username?: string;
-  avatar_url?: string;
-  email?: string;
-  is_admin?: boolean;
-}
+import type { User } from '@supabase/supabase-js';
 
 interface AuthContextType {
   currentUser: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<any>;
+  signUp: (email: string, password: string) => Promise<any>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  signInWithGoogle: () => Promise<any>;
+  signInWithTwitter: () => Promise<any>;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -38,31 +32,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const refreshUser = useCallback(async () => {
     try {
       const { data: { user: supabaseUser } } = await supabase.auth.getUser();
-
+      
       if (!supabaseUser) {
         setCurrentUser(null);
-        setLoading(false);
         return;
       }
 
+      // Get user profile
       const { data: profile, error } = await supabase
         .from('users')
         .select('*')
         .eq('id', supabaseUser.id)
         .single();
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Profile fetch error:', error);
-        throw error;
-      }
-
-      if (profile) {
-        setCurrentUser({
-          ...profile,
-          email: supabaseUser.email,
-        });
-      } else {
-        // Create new user profile if it doesn't exist
+      if (error) {
+        // If profile doesn't exist, create one
         const { data: newProfile, error: insertError } = await supabase
           .from('users')
           .insert([{
@@ -76,6 +60,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (insertError) throw insertError;
         setCurrentUser(newProfile);
+      } else {
+        setCurrentUser(profile);
       }
     } catch (error) {
       console.error('Error refreshing user:', error);
@@ -85,10 +71,86 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  const signInWithEmail = useCallback(async (email: string, password: string) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+      await refreshUser();
+      return data;
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
+  }, [refreshUser]);
+
+  const signUp = useCallback(async (email: string, password: string) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+      toast.showSuccess('Please check your email to verify your account');
+      return data;
+    } catch (error) {
+      console.error('Signup error:', error);
+      throw error;
+    }
+  }, [toast]);
+
+  const logout = useCallback(async () => {
+    try {
+      await supabase.auth.signOut();
+      setCurrentUser(null);
+      toast.showSuccess('Signed out successfully');
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.showError('Failed to sign out');
+    }
+  }, [toast]);
+
+  const signInWithGoogle = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`
+        }
+      });
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error('Google sign-in error:', error);
+      return { data: null, error };
+    }
+  }, []);
+
+  const signInWithTwitter = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'twitter',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`
+        }
+      });
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error('Twitter sign-in error:', error);
+      return { data: null, error };
+    }
+  }, []);
+
   useEffect(() => {
     refreshUser();
 
-    // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
         refreshUser();
@@ -100,48 +162,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, [refreshUser]);
 
-  const login = useCallback(async (email: string, password: string) => {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        console.error('Auth error:', error);
-        throw error;
-      }
-
-      if (!data.user) {
-        throw new Error('No user returned from authentication');
-      }
-
-      await refreshUser();
-      return data;
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error; // Propagate the error to be handled by the component
-    }
-  }, [refreshUser]);
-
-  const logout = useCallback(async () => {
-    try {
-      await supabase.auth.signOut();
-      setCurrentUser(null);
-      toast.showSuccess('Signed out successfully');
-    } catch (error) {
-      console.error('Logout error:', error);
-      toast.showError('Failed to sign out. Please try again.');
-    }
-  }, [toast]);
-
   return (
     <AuthContext.Provider value={{
       currentUser,
       loading,
-      login,
+      signInWithEmail,
+      signUp,
       logout,
-      refreshUser
+      refreshUser,
+      signInWithGoogle,
+      signInWithTwitter
     }}>
       {children}
     </AuthContext.Provider>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../config/supabaseClient';
 import { useToast } from '../contexts/ToastContext';
 import { User } from '@supabase/supabase-js';
 
@@ -103,6 +103,24 @@ export function useAuth() {
     }
   };
 
+  const signInWithGoogle = async () => {
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`
+        }
+      });
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Google login error:', error);
+      toast.showError('Failed to sign in with Google');
+      throw error;
+    }
+  };
+
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -129,5 +147,6 @@ export function useAuth() {
     logout,
     signup,
     refreshUser,
+    signInWithGoogle,
   };
 }
