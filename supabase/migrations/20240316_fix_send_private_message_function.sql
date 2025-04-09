@@ -5,7 +5,10 @@ BEGIN
         CREATE TYPE notification_type AS ENUM (
             'direct_message',
             'chat_message',
-            'system_message'
+            'system_message',
+            'event_update', -- Add other relevant types if they exist
+            'challenge_update',
+            'wallet_update'
         );
     END IF;
 END $$;
@@ -21,7 +24,7 @@ CREATE OR REPLACE FUNCTION send_private_message(
   p_sender_id UUID,
   p_receiver_id UUID,
   p_media_url TEXT DEFAULT NULL,
-  p_notification_type TEXT DEFAULT 'direct_message'
+  p_notification_type TEXT DEFAULT 'direct_message' -- Default remains text for flexibility, but could use the enum
 )
 RETURNS TABLE (
   id UUID,
@@ -52,13 +55,13 @@ BEGIN
   -- Create notification for the receiver
   INSERT INTO notifications (
     user_id,
-    type,
+    notification_type, -- Changed 'type' to 'notification_type'
     title,
     content,
     metadata
   ) VALUES (
     p_receiver_id,
-    p_notification_type,  -- Use the notification_type parameter as the type value
+    p_notification_type, -- Use the notification_type parameter as the value
     'New Message',
     p_content,
     jsonb_build_object(
@@ -82,4 +85,5 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Grant execute permission to authenticated users
+-- Ensure the grant matches the function signature
 GRANT EXECUTE ON FUNCTION send_private_message(TEXT, UUID, UUID, TEXT, TEXT) TO authenticated;
