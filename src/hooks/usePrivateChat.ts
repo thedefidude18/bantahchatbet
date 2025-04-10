@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { supabase } from '../lib/supabase';
 
@@ -16,6 +15,7 @@ interface PrivateMessage {
     username: string | null;
   };
 }
+import { useAuth } from '../contexts/AuthContext';
 
 export function usePrivateChat(receiverId: string) {
   const [messages, setMessages] = useState<PrivateMessage[]>([]);

@@ -1,14 +1,14 @@
 import React from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
-import { ToastContainer } from 'react-toastify';
 import { AuthProvider } from './contexts/AuthContext';
-import { SocketProvider } from './contexts/SocketContext';
 import { SplashScreenProvider } from './contexts/SplashScreenContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { WalletProvider } from './contexts/WalletContext';
+import { SupabaseProvider } from './contexts/SupabaseContext';
+import { SocketProvider } from './contexts/SocketContext';
 import { SettingsProvider } from './contexts/SettingsContext';
-import DesktopNav from './components/DesktopNav';
+import { AppRouter } from './router/config';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 
 
@@ -37,121 +37,22 @@ const App: React.FC = () => {
   const isAuthPage = ['/signin', '/admin/signin'].includes(location.pathname);
 
   return (
-    <ToastProvider>
-      <AuthProvider>
-        <WalletProvider>
-          <SocketProvider>
+      <SupabaseProvider>
+        <AuthProvider>
+          <ToastProvider>
             <SettingsProvider>
-              <SplashScreenProvider>
-                <div className="flex">
-                  {!isAuthPage && <DesktopNav />}
-                  <main className="flex-1">
-                    <Routes>
-                      {/* Public routes */}
-                      <Route path="/signin" element={<SignIn />} />
-                      <Route path="/help" element={<Help />} />
-                      <Route path="/privacy" element={<Privacy />} />
-
-                      {/* Protected routes */}
-                      <Route 
-                        path="/events" 
-                        element={
-                          <ProtectedRoute>
-                            <Events />
-                          </ProtectedRoute>
-                        } 
-                      />
-                      <Route 
-                        path="/wallet" 
-                        element={
-                          <ProtectedRoute>
-                            <Wallet />
-                          </ProtectedRoute>
-                        } 
-                      />
-                      <Route path="/games" element={
-                        <ProtectedRoute>
-                          <Games />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/myevents" element={
-                        <ProtectedRoute>
-                          <MyEvents />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/challenge/:id" element={
-                        <ProtectedRoute>
-                          <ChallengeDetails />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/create" element={
-                        <ProtectedRoute>
-                          <Create />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/profile" element={
-                        <ProtectedRoute>
-                          <Profile />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/settings/profile" element={
-                        <ProtectedRoute>
-                          <ProfileSettings />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/settings" element={
-                        <ProtectedRoute>
-                          <Settings />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/referral" element={
-                        <ProtectedRoute>
-                          <Referral />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/leaderboard" element={
-                        <ProtectedRoute>
-                          <Leaderboard />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/messages" element={
-                        <ProtectedRoute>
-                          <Messages />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/notifications" element={
-                        <ProtectedRoute>
-                          <Notifications />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/taxi-share" element={
-                        <ProtectedRoute>
-                          <TaxiShare />
-                        </ProtectedRoute>
-                      } />
-                      <Route 
-                        path="/challenge/:id/chat" 
-                        element={
-                          <ProtectedRoute>
-                            <ChallengeChat />
-                          </ProtectedRoute>
-                        } 
-                      />
-
-                      {/* Redirects */}
-                      <Route path="/" element={<Navigate to="/events" replace />} />
-                      <Route path="*" element={<Navigate to="/events" replace />} />
-                    </Routes>
-                    <PWAInstallPrompt />
-                  </main>
-                </div>
-              </SplashScreenProvider>
+              <WalletProvider>
+                <SocketProvider>
+                  <SplashScreenProvider>
+                    <AppRouter/>
+                  </SplashScreenProvider>
+                </SocketProvider>
+              </WalletProvider>
             </SettingsProvider>
-          </SocketProvider>
-        </WalletProvider>
-      </AuthProvider>
-    </ToastProvider>
+          </ToastProvider>
+        </AuthProvider>
+      </SupabaseProvider>
   );
 };
-
+          
 export default App;
