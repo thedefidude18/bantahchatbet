@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { io, Socket } from 'socket.io-client';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useSupabase } from '../contexts/SupabaseContext';
@@ -18,172 +17,136 @@ interface Message {
 export function useEventChat(eventId: string) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isConnected, setIsConnected] = useState(false);
-  const [isJoined, setIsJoined] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const socketRef = useRef<Socket | null>(null);
   const { currentUser } = useAuth();
   const { supabase } = useSupabase();
-  const toast = useToast();  // Moved hook to maintain consistent order
+  const toast = useToast();
 
+  // Fetch initial messages
+  const fetchMessages = useCallback(async () => {
+    if (!eventId || !supabase) return;
+    
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*, sender:profiles(id, username, avatar_url)')
+        .eq('event_id', eventId)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching messages:', error);
+        toast.showError('Failed to load messages');
+      } else {
+        setMessages(data as Message[]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch messages:', error);
+      toast.showError('Failed to load messages');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [eventId, supabase, toast]);
+
+  // Set up Supabase Realtime subscription
   useEffect(() => {
-    let mounted = true;
-    let retryTimeout: NodeJS.Timeout;
+    if (!eventId || !supabase || !currentUser) {
+      setIsLoading(false);
+      return;
+    }
 
-    const initSocket = async () => {
-      if (!currentUser || !eventId) {
-        setIsLoading(false);
-        return;
-      }
+    fetchMessages();
 
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.access_token) {
-          throw new Error('No access token available');
+    // Set up Supabase Realtime channel
+    const channel = supabase
+      .channel(`event_chat_${eventId}`)
+      .on(
+        'postgres_changes',
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'messages', 
+          filter: `event_id=eq.${eventId}` 
+        },
+        (payload) => {
+          // Handle new message
+          const newMessage = payload.new as any;
+          
+          // Fetch the sender information if not included in the payload
+          if (!newMessage.sender) {
+            supabase
+              .from('profiles')
+              .select('id, username, avatar_url')
+              .eq('id', newMessage.sender_id)
+              .single()
+              .then(({ data: senderData }) => {
+                if (senderData) {
+                  const messageWithSender = {
+                    ...newMessage,
+                    sender: senderData
+                  };
+                  setMessages(prev => [...prev, messageWithSender as Message]);
+                }
+              });
+          } else {
+            setMessages(prev => [...prev, newMessage as Message]);
+          }
         }
-
-        const socketUrl = new URL(import.meta.env.VITE_SOCKET_URL);
-        socketUrl.protocol = socketUrl.protocol.replace('http', 'ws');
-
-        const socket = io(socketUrl.toString(), {
-          auth: {
-            token: session.access_token,
-            userId: currentUser.id
-          },
-          transports: ['websocket'],
-          path: '/socket.io/',
-          reconnectionAttempts: 3,
-          reconnectionDelay: 1000,
-          timeout: 5000,
-          withCredentials: true,
-          extraHeaders: {
-            'Authorization': `Bearer ${session.access_token}`
-          }
-        });
-
-        socket.io.on("error", (error) => {
-          console.error("Transport error:", error);
-          if (mounted) {
-            retryTimeout = setTimeout(initSocket, 2000);
-          }
-        });
-
-        socket.on('connect', () => {
-          console.log('Connected to server, transport:', socket.io.engine.transport.name);
-          socket.emit('join_event_chat', {
-            eventId,
-            userId: currentUser.id,
-            username: currentUser.username,
-            token: session.access_token
-          });
-        });
-
-        socket.on('disconnect', () => {
-          console.log('Disconnected from server');
-          if (mounted) {
-            setIsConnected(false);
-            setIsJoined(false);
-          }
-        });
-
-        // Debug listeners
-        socket.on('connect', () => {
-          console.log('Socket connected with ID:', socket.id);
-          socket.emit('join_event_chat', { 
-            eventId,
-            userId: currentUser.id,
-            username: currentUser.username
-          });
-        });
-
-        socket.on('connect_error', (error) => {
-          console.error('Connection error:', error);
-          if (mounted) {
-            toast.showError('Connection error: ' + error.message);
-            setIsLoading(false);
-          }
-        });
-
-        socket.on('join_success', () => {
-          if (mounted) {
-            setIsJoined(true);
-            setIsLoading(false);
-          }
-        });
-
-        socket.on('chat_history', (history: Message[]) => {
-          if (mounted) {
-            setMessages(history);
-          }
-        });
-
-        socket.on('new_event_message', (message: Message) => {
-          if (mounted) {
-            setMessages(prev => [...prev, message]);
-          }
-        });
-
-        socket.on('chat_error', (error) => {
-          console.error('Chat error:', error);
-          if (mounted) {
-            toast.showError(error.message);
-            setIsLoading(false);
-          }
-        });
-
-        socketRef.current = socket;
-      } catch (error) {
-        console.error('Socket initialization error:', error);
-        if (mounted) {
-          setIsLoading(false);
-          toast.showError('Failed to connect to chat');
-          retryTimeout = setTimeout(initSocket, 2000);
+      )
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('Connected to Supabase Realtime for event:', eventId);
+          setIsConnected(true);
+        } else {
+          console.log('Supabase Realtime status:', status);
+          setIsConnected(false);
         }
-      }
-    };
-
-    initSocket();
+      });
 
     return () => {
-      mounted = false;
-      if (retryTimeout) {
-        clearTimeout(retryTimeout);
-      }
-      if (socketRef.current) {
-        socketRef.current.removeAllListeners();
-        socketRef.current.disconnect();
-        socketRef.current = null;
-      }
+      // Clean up subscription
+      supabase.removeChannel(channel);
     };
-  }, [currentUser, eventId, supabase, toast]);
+  }, [eventId, supabase, currentUser, fetchMessages, toast]);
 
-  const sendMessage = useCallback((content: string) => {
-    if (!socketRef.current?.connected || !isJoined) {
-      toast.showError('Chat is not connected');
+  // Send message function
+  const sendMessage = useCallback(async (content: string): Promise<boolean> => {
+    if (!content?.trim() || !currentUser || !supabase || !isConnected) {
+      if (!isConnected) toast.showError('Chat is not connected');
       return false;
     }
 
-    if (!content?.trim()) {
-      return false;
-    }
-
-    socketRef.current.emit('send_event_message', {
-      eventId,
-      content: content.trim(),
-      metadata: {
-        notification_type: 'event_message',
-        message_type: 'chat',
+    try {
+      const { error } = await supabase.from('messages').insert({
+        content: content.trim(),
         event_id: eventId,
-        sender_id: currentUser?.id
-      }
-    });
+        sender_id: currentUser.id,
+        metadata: {
+          notification_type: 'event_message',
+          message_type: 'chat',
+          event_id: eventId,
+          sender_id: currentUser.id
+        }
+      });
 
-    return true;
-  }, [eventId, isJoined, toast, currentUser]);
+      if (error) {
+        console.error('Error sending message:', error);
+        toast.showError('Failed to send message');
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      toast.showError('Failed to send message');
+      return false;
+    }
+  }, [eventId, currentUser, supabase, isConnected, toast]);
 
   return {
     messages,
     sendMessage,
-    isConnected: isConnected && isJoined,
+    isConnected,
     isLoading
   };
 }

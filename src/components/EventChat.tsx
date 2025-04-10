@@ -3,10 +3,10 @@ import { X, Send, Users, Clock, MoreVertical, ArrowLeft, Check, X as XIcon } fro
 import { useAuth } from '../contexts/AuthContext';
 import UserAvatar from './UserAvatar';
 import BetConfirmationModal from './BetConfirmationModal';
-import { useEventChat } from '../hooks/useEventChat';
 import { format } from 'date-fns';
 import { useToast } from '../hooks/useToast';
-import { SupabaseProvider } from './contexts/SupabaseContext';
+import { SupabaseProvider, useSupabase } from '../contexts/SupabaseContext';
+import { useSupabaseClient } from '@supabase/auth-helpers-react';
 
 interface EventChatProps {
   event: {
@@ -31,10 +31,124 @@ interface EventChatProps {
   onClose: () => void;
 }
 
-const EventChat: React.FC<EventChatProps> = React.memo(({ event, onClose }) => {
-  const { messages, sendMessage, isLoading, isConnected } = useEventChat(event.id);
+interface Message {
+  id: string;
+  content: string;
+  created_at: string;
+  sender: {
+    id: string;
+    username: string;
+    avatar_url?: string;
+  };
+}
+
+// Custom hook to check if Supabase is available
+function useIsSupabaseAvailable() {
+  try {
+    useSupabase();
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+export const useEventChat = (eventId: string) => {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
+  const supabase = useSupabaseClient();
+  const { currentUser } = useAuth();
+
+  const fetchMessages = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*, sender:profiles(id, username, avatar_url)')
+        .eq('event_id', eventId)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching messages:', error);
+      } else {
+        setMessages(data as Message[]);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [eventId, supabase]);
+
+  useEffect(() => {
+    fetchMessages();
+
+    const channel = supabase
+      .channel(`event_chat_${eventId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'messages', filter: `event_id=eq.${eventId}` },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newMessage = {
+              ...(payload.new as any),
+              sender: (payload.new as any).profiles,
+            };
+            setMessages((prevMessages) => [...prevMessages, newMessage as Message]);
+          }
+        }
+      )
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          setIsConnected(true);
+        } else {
+          setIsConnected(false);
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [eventId, supabase, fetchMessages]);
+
+  const sendMessage = async (content: string): Promise<boolean> => {
+    if (!currentUser) {
+      console.error('User not authenticated.');
+      return false;
+    }
+
+    try {
+      const { error } = await supabase.from('messages').insert({
+        content,
+        event_id: eventId,
+        sender_id: currentUser.id,
+      });
+
+      if (error) {
+        console.error('Error sending message:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      return false;
+    }
+  };
+
+  return { messages, sendMessage, isLoading, isConnected };
+};
+
+const EventChatContent: React.FC<EventChatProps> = ({ event, onClose }) => {
   const { currentUser } = useAuth();
   const toast = useToast();
+  const isSupabaseAvailable = useIsSupabaseAvailable();
+  
+  // Only use the chat hook if Supabase is available
+  const chatHook = isSupabaseAvailable 
+    ? useEventChat(event.id)
+    : { messages: [], sendMessage: async () => false, isLoading: true, isConnected: false };
+  
+  const { messages, sendMessage, isLoading, isConnected } = chatHook;
+  
   const [message, setMessage] = useState('');
   const [showBetModal, setShowBetModal] = useState(false);
   const [selectedPrediction, setSelectedPrediction] = useState<'YES' | 'NO' | null>(null);
@@ -99,15 +213,13 @@ const EventChat: React.FC<EventChatProps> = React.memo(({ event, onClose }) => {
   if (!currentUser) {
     return <div className="text-center p-4">Please login to participate in chat</div>;
   }
+  
+  if (!isSupabaseAvailable) {
+    return <div className="flex-1 flex items-center justify-center">Initializing chat...</div>;
+  }
+  
   return (
     <div className="flex flex-col h-full">
-      {/* Connection Status Banner */}
-      {!isConnected && (
-        <div className="bg-yellow-500/10 text-yellow-500 px-4 py-2 text-sm flex items-center justify-center gap-2">
-          <div className="animate-spin rounded-full h-4 w-4 border-2 border-yellow-500 border-t-transparent"></div>
-          Connecting to chat...
-        </div>
-      )}
 
       {/* Header */}
       <div className="bg-[#242538] border-b border-white/10">
@@ -253,7 +365,15 @@ const EventChat: React.FC<EventChatProps> = React.memo(({ event, onClose }) => {
       )}
     </div>
   );
-});
+};
 
-EventChat.displayName = 'EventChat';
+// Wrapper component that provides the SupabaseProvider
+const EventChat: React.FC<EventChatProps> = (props) => {
+  return (
+    <SupabaseProvider>
+      <EventChatContent {...props} />
+    </SupabaseProvider>
+  );
+};
 
+export default EventChat;
