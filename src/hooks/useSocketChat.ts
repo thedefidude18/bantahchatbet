@@ -20,7 +20,10 @@ interface TypingUser {
   name: string;
 }
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 
+  (window.location.hostname.includes('github.dev') 
+    ? `wss://${window.location.hostname}:8080` 
+    : 'ws://localhost:8080');
 const RECONNECTION_ATTEMPTS = 5;
 const RECONNECTION_DELAY = 1000;
 
