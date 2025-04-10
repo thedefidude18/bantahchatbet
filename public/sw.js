@@ -41,9 +41,13 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   const isAllowedImageDomain = ALLOWED_IMAGE_DOMAINS.some(domain => url.hostname === domain);
 
-  if (event.request.method !== 'GET') {
+  if (
+    event.request.method !== 'GET' ||
+    event.request.headers.get('upgrade') === 'websocket'
+  ) {
     return;
   }
+  
 
   event.respondWith(
     caches.match(event.request).then((response) => {
