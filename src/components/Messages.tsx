@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { MessageSquare, Search, Phone, Video, Info, Image, Smile, Send, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,8 +7,8 @@ import UserAvatar from './UserAvatar';
 import MobileFooterNav from './MobileFooterNav';
 import { useChat } from '../hooks/useChat';
 import ChatMessage from './ChatMessage';
-import { io, Socket } from 'socket.io-client';
 import { useToast } from '../contexts/ToastContext';
+import { supabase } from '../lib/supabase';
 
 interface Chat {
   id: string;
@@ -30,18 +30,17 @@ const Messages: React.FC = () => {
   const [messageText, setMessageText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [replyingTo, setReplyingTo] = useState<any>(null);
-  const socketRef = useRef<Socket | null>(null);
+  // const socketRef = useRef<Socket | null>(null); // Removed
+
+  const [messages, setMessages] = useState<any[]>([]);
 
   const {
-    messages,
-    sendMessage,
     loading,
     chats,
     toggleReaction,
     refreshMessages
   } = useChat(selectedChat?.id);
 
-  // Add this function to fetch private messages
   const fetchPrivateMessages = useCallback(async () => {
     if (!selectedChat || !currentUser) return;
     
@@ -60,94 +59,47 @@ const Messages: React.FC = () => {
       console.error('Error fetching private messages:', error);
       toast.showError('Failed to load messages');
     }
-  }, [selectedChat, currentUser]);
+  }, [selectedChat, currentUser, toast]);
 
-  // Add this effect to load messages when chat is selected
   useEffect(() => {
     if (selectedChat) {
       fetchPrivateMessages();
     }
   }, [selectedChat, fetchPrivateMessages]);
 
-  // Update the socket listener to add new messages to the state
-  useEffect(() => {
-    if (!currentUser) return;
+  // Removed socket useEffect
 
-    const socketUrl = new URL(import.meta.env.VITE_SOCKET_URL);
-    const socket = io(socketUrl.toString(), {
-      auth: {
-        token: currentUser.token,
-        userId: currentUser.id
-      },
-      transports: ['websocket']
-    });
-
-    socket.on('connect', () => {
-      console.log('Socket connected');
-    });
-
-    socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
-    });
-
-    socket.on('private_message', (message) => {
-      console.log('Received private message:', message);
-      // Add the new message to the state
-      setMessages(prev => [...prev, message]);
-    });
-
-    socketRef.current = socket;
-
-    return () => {
-      socket.disconnect();
-    };
-  }, [currentUser]);
-
-  // Join private chat room when a chat is selected
-  useEffect(() => {
-    if (!socketRef.current || !selectedChat) return;
-
-    console.log('[Chat Debug] Setting up socket listeners for chat:', selectedChat.id);
-    
-    socketRef.current.emit('join_private_chat', {
-      chat_id: selectedChat.id
-    });
-
-    socketRef.current.on('joined_private_chat', (data) => {
-      console.log('[Chat Debug] Joined private chat room:', data.chat_id);
-    });
-
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.off('joined_private_chat');
-        socketRef.current.emit('leave_private_chat', {
-          chat_id: selectedChat.id
-        });
-      }
-    };
-  }, [selectedChat]);
+  // Removed socket useEffect
 
   const handleSendMessage = async () => {
-    if (!messageText.trim() || !selectedChat || !socketRef.current) return;
+    if (!messageText.trim() || !selectedChat) return;
     
     try {
-      // Use WebSocket to send the message
-     socketRef.current.emit('send_private_message', {
-       content: messageText.trim(),
-       sender_id: currentUser.id,
-       receiver_id: selectedChat.id,
-       notification_type: 'direct_message'
-     });
+      //  Use Supabase to send the message
+      const { data, error } = await supabase
+        .from('private_messages')
+        .insert([
+          {
+            content: messageText.trim(),
+            sender_id: currentUser.id,
+            receiver_id: selectedChat.id,
+          }
+        ])
+        .select()
+
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
       
       setMessageText('');
+      refreshMessages()
     } catch (error) {
       console.error('Error sending message:', error);
       toast.showError('Failed to send message');
     }
   };
 
-  // Ensure no Supabase operations are used for sending messages
-  // Remove any Supabase-related code for message sending
   const handleReply = (messageId: string) => {
     const messageToReply = messages.find(m => m.id === messageId);
     if (messageToReply) {

@@ -10,8 +10,7 @@ import { format } from 'date-fns';
 import { useToast } from '../contexts/ToastContext';
 import EmojiPicker from 'emoji-picker-react';
 import { Menu } from '@headlessui/react';
-import ChallengeModal from '../components/ChallengeModal';
-import { useSocket } from '../contexts/SocketContext';
+import ChallengeModal from '../components/ChallengeModal';;
 import { PrivateMessageReactions } from '../components/PrivateMessageReactions';
 import ProfileCard from '../components/ProfileCard';
 

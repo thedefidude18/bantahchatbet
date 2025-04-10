@@ -3,7 +3,6 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ToastContainer } from 'react-toastify';
 import { AuthProvider } from './contexts/AuthContext';
-import { SocketProvider } from './contexts/SocketContext';
 import { SplashScreenProvider } from './contexts/SplashScreenContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { WalletProvider } from './contexts/WalletContext';
@@ -40,7 +39,6 @@ const App: React.FC = () => {
     <ToastProvider>
       <AuthProvider>
         <WalletProvider>
-          <SocketProvider>
             <SettingsProvider>
               <SplashScreenProvider>
                 <div className="flex">
@@ -147,7 +145,6 @@ const App: React.FC = () => {
                 </div>
               </SplashScreenProvider>
             </SettingsProvider>
-          </SocketProvider>
         </WalletProvider>
       </AuthProvider>
     </ToastProvider>

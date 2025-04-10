@@ -6,19 +6,20 @@ import { Event } from '../types/event';
 import JoinRequestModal from './JoinRequestModal';
 import { toast } from 'react-toastify';
 import { generateEventOGData } from '../utils/opengraph';
+import NewEventChat from './NewEventChat';
 
 const DEFAULT_BANNER = 'https://images.unsplash.com/photo-1518546305927-5a555bb7020d?w=800&auto=format&fit=crop';
 
 interface EventCardProps {
   event: Event;
-  onJoin: (event: Event) => void;
   onChatClick: (event: Event) => void;
 }
 
-const EventCard: React.FC<EventCardProps> = ({ event, onJoin, onChatClick }) => {
+const EventCard: React.FC<EventCardProps> = ({ event, onChatClick }) => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
   const [showJoinModal, setShowJoinModal] = useState(false);
+  const [showChat, setShowChat] = useState(false);
 
   const isActive = React.useMemo(() => {
     const now = new Date();
@@ -54,7 +55,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, onJoin, onChatClick }) => 
     if (event.is_private) {
       setShowJoinModal(true);
     } else {
-      onJoin(event);
+      setShowChat(true);
     }
   };
 
@@ -87,6 +88,10 @@ const EventCard: React.FC<EventCardProps> = ({ event, onJoin, onChatClick }) => 
         toast.error('Failed to copy event link');
       }
     }
+  };
+
+  const handleCloseChat = () => {
+    setShowChat(false);
   };
 
   return (
@@ -192,7 +197,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, onJoin, onChatClick }) => 
         onClose={() => setShowJoinModal(false)}
         onSubmit={() => {
           setShowJoinModal(false);
-          onJoin(event);
+          setShowChat(true);
         }}
         eventTitle={event.title}
         wagerAmount={event.pool?.total_amount || 0}
@@ -204,6 +209,8 @@ const EventCard: React.FC<EventCardProps> = ({ event, onJoin, onChatClick }) => 
           currentParticipants: event.current_participants || 0
         }}
       />
+
+      {showChat && <NewEventChat eventId={event.id} onClose={handleCloseChat} />}
     </>
   );
 };

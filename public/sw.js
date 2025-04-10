@@ -7,13 +7,13 @@ const STATIC_ASSETS = [
   '/icons/icon-512x512.png'
 ];
 
-// Add image domains to whitelist
+// Image domains allowed for caching
 const ALLOWED_IMAGE_DOMAINS = [
   'images.unsplash.com',
   self.location.origin
 ];
 
-// Install Service Worker
+// Install Service Worker and pre-cache static assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -22,7 +22,7 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Activate Service Worker
+// Activate Service Worker and clean up old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -35,50 +35,48 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch Event Handler
+// Fetch Handler
 self.addEventListener('fetch', (event) => {
-  // Check if the request is for an image from allowed domains
-  const url = new URL(event.request.url);
-  const isAllowedImageDomain = ALLOWED_IMAGE_DOMAINS.some(domain => url.hostname === domain);
-
+  // Skip non-GET and WebSocket upgrade requests
   if (
     event.request.method !== 'GET' ||
     event.request.headers.get('upgrade') === 'websocket'
   ) {
     return;
   }
-  
+
+  const url = new URL(event.request.url);
+  const isAllowedImageDomain = ALLOWED_IMAGE_DOMAINS.some(domain => url.hostname === domain);
 
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      if (response) {
-        return response;
+    caches.match(event.request).then((cachedResponse) => {
+      // Serve from cache if available
+      if (cachedResponse) {
+        return cachedResponse;
       }
 
-      return fetch(event.request).then((fetchResponse) => {
-        // Don't cache if:
+      return fetch(event.request).then((networkResponse) => {
+        // Skip caching if:
         // 1. It's an API call
-        // 2. It's not from allowed domains
-        // 3. Response is not ok
+        // 2. The domain isn't allowed
+        // 3. Response isn't OK
         if (
           event.request.url.includes('/api/') ||
           (!isAllowedImageDomain && !event.request.url.startsWith(self.location.origin)) ||
-          !fetchResponse.ok
+          !networkResponse.ok
         ) {
-          return fetchResponse;
+          return networkResponse;
         }
 
-        // Clone the response since we need to return it and also store it in the cache
-        const responseToCache = fetchResponse.clone();
-
+        // Cache a copy of the response
+        const responseToCache = networkResponse.clone();
         caches.open(CACHE_NAME).then((cache) => {
           cache.put(event.request, responseToCache);
         });
 
-        return fetchResponse;
+        return networkResponse;
       }).catch((error) => {
         console.error('Fetch failed:', error);
-        // Return a fallback response or rethrow the error
         throw error;
       });
     })

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useEvent } from '../hooks/useEvent';
 import { useToast } from '../contexts/ToastContext';
 import EventCard from '../components/EventCard';
-import EventChat from '../components/EventChat';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MobileFooterNav from '../components/MobileFooterNav';
 import Header from '../components/Header';
@@ -34,8 +33,6 @@ interface Event {
 
 const Events = () => {
   const navigate = useNavigate();
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-  const [showChat, setShowChat] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const { events, loading } = useEvent();
   const toast = useToast();
@@ -111,12 +108,6 @@ const Events = () => {
     selectedCategory === 'all' ? true : event.category.toLowerCase() === selectedCategory
   );
 
-  const handleChatClick = (event: Event) => {
-    console.log('Opening chat for event:', event); // Debug log
-    setSelectedEvent(event);
-    setShowChat(true);
-  };
-
   return (
     <div className="min-h-screen bg-light-bg dark:bg-[#1a1b2e]">
       <Header title="Events" icon={<Gamepad2 className="w-6 h-6" />} showSearch />
@@ -177,23 +168,9 @@ const Events = () => {
             <EventCard
               key={event.id}
               event={event}
-              onJoin={() => handleChatClick(event)}
-              onChatClick={() => handleChatClick(event)}
             />
           ))}
         </div>
-
-        {/* Chat Overlay */}
-        {showChat && selectedEvent && (
-          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
-            <div className="w-full h-full md:w-3/4 md:h-3/4 bg-[#242538] rounded-lg overflow-hidden">
-              <EventChat
-                event={selectedEvent}
-                onClose={() => setShowChat(false)}
-              />
-            </div>
-          </div>
-        )}
       </div>
 
       <MobileFooterNav />
