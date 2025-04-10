@@ -103,7 +103,7 @@ const formatNumber = (num, currency) => {
 
                {/* Mesages */}
                <button
-                  onClick={() => handleNavigate('/leaderboard')}
+                  onClick={() => handleNavigate('/messages')}
                   className="p-2 rounded-full hover:bg-gray-100 transition-colors relative"
                   aria-label="Messages"
                 >
