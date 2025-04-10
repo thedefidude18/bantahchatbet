@@ -8,7 +8,7 @@ import { WalletProvider } from './contexts/WalletContext';
 import { SupabaseProvider } from './contexts/SupabaseContext';
 import { SocketProvider } from './contexts/SocketContext';
 import { SettingsProvider } from './contexts/SettingsContext';
-import { AppRouter } from './router/config';
+import { AppRouter } from './router/config' ;
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 
 
@@ -44,7 +44,7 @@ const App: React.FC = () => {
               <WalletProvider>
                 <SocketProvider>
                   <SplashScreenProvider>
-                    <AppRouter/>
+                  
                   </SplashScreenProvider>
                 </SocketProvider>
               </WalletProvider>

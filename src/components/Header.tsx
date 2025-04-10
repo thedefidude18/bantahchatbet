@@ -98,7 +98,20 @@ const formatNumber = (num, currency) => {
             {currentUser ? (
               <>
 
-                  {/* Leaderboard */}
+                   {/* Leaderboard */}
+                <button
+                  onClick={() => handleNavigate('/messages')}
+                  className="p-2 rounded-full hover:bg-gray-100 transition-colors relative"
+                  aria-label="Messages"
+                >
+                  <img 
+                    src="/src/leaderboard_icon.png" 
+                    alt="Leaderboard"
+                    className="h-5 w-5 text-black-600" 
+                  />
+                </button>
+                
+                {/* Leaderboard */}
                 <button
                   onClick={() => handleNavigate('/leaderboard')}
                   className="p-2 rounded-full hover:bg-gray-100 transition-colors relative"
