@@ -6,6 +6,7 @@ import BetConfirmationModal from './BetConfirmationModal';
 import { useEventChat } from '../hooks/useEventChat';
 import { format } from 'date-fns';
 import { useToast } from '../hooks/useToast';
+import { SupabaseProvider } from './contexts/SupabaseContext';
 
 interface EventChatProps {
   event: {
@@ -256,4 +257,3 @@ const EventChat: React.FC<EventChatProps> = React.memo(({ event, onClose }) => {
 
 EventChat.displayName = 'EventChat';
 
-export default EventChat;
