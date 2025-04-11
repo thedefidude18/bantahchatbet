@@ -120,8 +120,18 @@ const ChatList: React.FC<ChatListProps> = ({ onChatSelect, selectedChatId }) => 
             </div>
           )}
           {searchQuery && searchResults.length === 0 && !isSearchingUsers && (
-            <div className="absolute top-full left-0 right-0 bg-white rounded-md shadow-md z-20 py-2 px-4 text-gray-500">
-              No users found
+            <div className="absolute top-full left-0 right-0 bg-white rounded-md shadow-md z-20 p-6 text-center">
+              <div className="flex flex-col items-center space-y-3">
+                <span className="text-gray-400">
+                  <Search size={28} />
+                </span>
+                <div>
+                  <p className="text-gray-700 font-medium text-base mb-1">No matching users found</p>
+                  <p className="text-sm text-gray-500">
+                    Please check the spelling or try a different search term
+                  </p>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -131,8 +141,16 @@ const ChatList: React.FC<ChatListProps> = ({ onChatSelect, selectedChatId }) => 
       <div className="overflow-y-auto flex-grow bg-white">
         {searchQuery && searchResults.length > 0 ? null : (
           filteredChats.length === 0 ? (
-            <div className="flex items-center justify-center h-full text-gray-500">
-              {searchQuery ? 'No chats found' : 'No chats yet'}
+            <div className="flex flex-col items-center justify-center h-full p-6 text-center">
+              <span className="text-gray-400 mb-3">
+                <Search size={28} />
+              </span>
+              <p className="text-gray-700 font-medium text-base mb-1">
+                {searchQuery ? 'No matching chats found' : 'No chats yet'}
+              </p>
+              <p className="text-sm text-gray-500">
+                {searchQuery ? 'Try different search terms' : 'Start a new chat to begin messaging'}
+              </p>
             </div>
           ) : (
             <ul className="divide-y divide-gray-200">
