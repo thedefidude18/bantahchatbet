@@ -8,6 +8,7 @@ import { useSearchUsers } from '../hooks/useSearchUsers';
 import { useToast } from '../contexts/ToastContext';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase'; // Ensure you import supabase
+import UserProfileCard from './UserProfileCard';
 
 interface ChatListProps {
   selectedChatId?: string; // To highlight the currently selected chat
@@ -34,6 +35,12 @@ interface ChatListItem {
   unreadCount?: number; // You'll need logic to fetch this
 }
 
+interface Chat {
+  id: string;
+  created_at: string;
+  participants: string[];
+}
+
 const ChatList: React.FC<ChatListProps> = ({ selectedChatId }) => {
   const { currentUser } = useAuth();
   const { users: searchResults, loading: isSearchingUsers, searchUsers } = useSearchUsers();
@@ -43,6 +50,7 @@ const ChatList: React.FC<ChatListProps> = ({ selectedChatId }) => {
   const navigate = useNavigate();
   const [chatListItems, setChatListItems] = useState<ChatListItem[]>([]);
   const [loadingChats, setLoadingChats] = useState(true);
+  const [selectedUser, setSelectedUser] = useState<SearchUser | null>(null);
 
   useEffect(() => {
     const fetchUserChats = async () => {
@@ -51,41 +59,43 @@ const ChatList: React.FC<ChatListProps> = ({ selectedChatId }) => {
         const { data, error } = await supabase
           .from('chats')
           .select(`
-            id,
-            created_at,
-            participants:chat_participants(
+            *,
+            chat_participants!inner (
               user_id,
-              user:users(*)
+              users_view!user_id (
+                id,
+                name,
+                username,
+                avatar_url
+              )
             ),
-            last_message:private_messages(
+            messages (
               content,
               created_at
             )
           `)
-          .join('chat_participants', 'chats.id', 'chat_participants.chat_id')
           .eq('chat_participants.user_id', currentUser?.id)
-          .order('chats.created_at', { ascending: false }); // Or order by last message time
+          .order('created_at', { ascending: false });
 
         if (error) throw error;
 
-        const formattedChats: ChatListItem[] = data?.map(chat => {
-          const otherParticipant = chat.participants?.find(
-            p => p.user_id !== currentUser?.id
-          )?.user;
+        const formattedChats: ChatListItem[] = (data || []).map(chat => {
+          const otherParticipant = chat.chat_participants
+            .find(p => p.user_id !== currentUser?.id)?.users_view;
 
           return {
             id: chat.id,
             otherParticipant: {
-              id: otherParticipant?.id,
-              name: otherParticipant?.name,
-              username: otherParticipant?.username,
+              id: otherParticipant?.id || '',
+              name: otherParticipant?.name || '',
+              username: otherParticipant?.username || '',
               avatar_url: otherParticipant?.avatar_url,
             },
-            lastMessage: chat.last_message?.[0]?.content,
-            lastMessageTime: chat.last_message?.[0]?.created_at ? new Date(chat.last_message[0].created_at) : null,
-            unreadCount: 0, // Implement logic to fetch unread counts
+            lastMessage: chat.messages?.[0]?.content,
+            lastMessageTime: chat.messages?.[0]?.created_at ? new Date(chat.messages[0].created_at) : null,
+            unreadCount: 0, // Implement unread count logic here if needed
           };
-        }) || [];
+        });
 
         setChatListItems(formattedChats);
       } catch (error) {
@@ -124,13 +134,56 @@ const ChatList: React.FC<ChatListProps> = ({ selectedChatId }) => {
   };
 
   const handleSelectUser = async (user: SearchUser) => {
-    console.log('Selected user for chat:', user);
+    try {
+      // Check if chat already exists
+      const { data: existingChat } = await supabase
+        .from('chats')
+        .select('id')
+        .eq('chat_participants.user_id', currentUser?.id)
+        .eq('chat_participants.other_user_id', user.id)
+        .single();
+
+      if (existingChat) {
+        navigate(`/chat/${existingChat.id}`);
+        return;
+      }
+
+      // Create new chat
+      const { data: newChat, error: chatError } = await supabase
+        .from('chats')
+        .insert([{ 
+          created_at: new Date().toISOString(),
+        }])
+        .select()
+        .single();
+
+      if (chatError) throw chatError;
+
+      // Add chat participants
+      const { error: participantsError } = await supabase
+        .from('chat_participants')
+        .insert([
+          { chat_id: newChat.id, user_id: currentUser?.id },
+          { chat_id: newChat.id, user_id: user.id }
+        ]);
+
+      if (participantsError) throw participantsError;
+
+      navigate(`/chat/${newChat.id}`);
+    } catch (error) {
+      console.error('Error creating chat:', error);
+      toast.showError('Failed to create chat');
+    }
     setSearchQuery('');
-    navigate(`/chat/${user.id}`); // Immediately navigate to the chat view with the selected user's ID
   };
 
   const handleOpenChat = (chatId: string) => {
     navigate(`/chat/${chatId}`);
+  };
+
+  const handleProfileClick = (e: React.MouseEvent, user: any) => {
+    e.stopPropagation();
+    setSelectedUser(user);
   };
 
   if (loadingChats || isSearchingUsers) {
@@ -190,6 +243,15 @@ const ChatList: React.FC<ChatListProps> = ({ selectedChatId }) => {
       </div>
 
       <div className="overflow-y-auto flex-grow bg-white">
+        {selectedUser && (
+          <div className="absolute inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <UserProfileCard 
+              user={selectedUser} 
+              onClose={() => setSelectedUser(null)}
+            />
+          </div>
+        )}
+        
         {searchQuery && searchResults.length > 0 ? null : (
           chatListItems.length === 0 && !loadingChats ? (
             <div className="flex flex-col items-center justify-center h-full p-6 text-center">
@@ -206,17 +268,39 @@ const ChatList: React.FC<ChatListProps> = ({ selectedChatId }) => {
                     className={`w-full block py-3 px-4 hover:bg-gray-100 transition-colors ${chat.id === selectedChatId ? 'bg-green-50' : ''}`}
                   >
                     <div className="flex items-center space-x-3">
-                      <UserAvatar src={chat.otherParticipant?.avatar_url} alt={chat.otherParticipant?.name} size="md" />
+                      <button
+                        onClick={(e) => handleProfileClick(e, chat.otherParticipant)}
+                        className="focus:outline-none"
+                      >
+                        <UserAvatar 
+                          src={chat.otherParticipant?.avatar_url} 
+                          alt={chat.otherParticipant?.name} 
+                          size="md" 
+                        />
+                      </button>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-800 truncate">{chat.otherParticipant?.name}</p>
+                        <div className="flex items-baseline">
+                          <p className="text-sm font-semibold text-gray-800 truncate mr-2">
+                            {chat.otherParticipant?.name}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">
+                            @{chat.otherParticipant?.username}
+                          </p>
+                        </div>
                         <p className="text-sm text-gray-500 truncate">{chat.lastMessage || 'No messages yet'}</p>
                       </div>
-                      {chat.lastMessageTime && (
-                        <span className="text-xs text-gray-500">{new Date(chat.lastMessageTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>
-                      )}
-                      {chat.unreadCount > 0 && (
-                        <div className="w-5 h-5 rounded-full bg-green-500 text-white text-xs flex items-center justify-center mt-1">{chat.unreadCount}</div>
-                      )}
+                      <div className="flex flex-col items-end">
+                        {chat.lastMessageTime && (
+                          <span className="text-xs text-gray-500">
+                            {new Date(chat.lastMessageTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                          </span>
+                        )}
+                        {chat.unreadCount > 0 && (
+                          <div className="mt-1 w-5 h-5 rounded-full bg-green-500 text-white text-xs flex items-center justify-center">
+                            {chat.unreadCount}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </button>
                 </li>

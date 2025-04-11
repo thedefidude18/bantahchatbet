@@ -3,7 +3,6 @@ import { ArrowLeft, Send, Loader, Plus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import UserAvatar from './UserAvatar';
-import { useSocketChat } from '../hooks/useSocketChat';
 
 const MOCK_MESSAGES = [
   {

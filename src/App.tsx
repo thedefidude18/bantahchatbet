@@ -9,7 +9,7 @@ import { WalletProvider } from './contexts/WalletContext';
 import { SettingsProvider } from './contexts/SettingsContext';
 import DesktopNav from './components/DesktopNav';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
-
+import ChatLayout from './components/ChatLayout';
 
 // Import pages
 import Events from './pages/Events';
@@ -135,6 +135,8 @@ const App: React.FC = () => {
                           </ProtectedRoute>
                         } 
                       />
+                      <Route path="/chats" element={<ChatLayout />} />
+                      <Route path="/chat/:chatId" element={<ChatLayout />} />
 
                       {/* Redirects */}
                       <Route path="/" element={<Navigate to="/events" replace />} />
