@@ -13,26 +13,26 @@ const DesktopNav: React.FC = () => {
     {
       id: 'events',
       path: '/events',
-      icon: <img src="/src/eventssvg.svg" alt="Events Icon" className="w-7 h-7" />,
+      icon: <img src="/eventssvg.svg" alt="Events Icon" className="w-7 h-7" />,
       label: 'Events',
     },
     {
       id: 'games',
       path: '/games',
-      icon: <img src="/src/gamessvg.svg" alt="Games Icon" className="w-8 h-8" />,
+      icon: <img src="/gamessvg.svg" alt="Games Icon" className="w-8 h-8" />,
       label: 'Challenge',
     },
     {
       id: 'create',
       path: '/create',
-      icon: <img src="/src/create.png" alt="Create Icon" className="w-10 h-10" />,
+      icon: <img src="/create.png" alt="Create Icon" className="w-10 h-10" />,
       label: 'Create',
       isMain: true,
     },
     {
       id: 'myevents',
       path: '/myevents',
-      icon: <img src="/src/listsvg.svg" alt="My Events Icon" className="w-8 h-8" />,
+      icon: <img src="/listsvg.svg" alt="My Events Icon" className="w-8 h-8" />,
       label: 'My Events',
     },
     {
@@ -48,7 +48,7 @@ const DesktopNav: React.FC = () => {
           }}
         />
       ) : (
-        <img src="/src/avatar.svg" alt="Profile Icon" className="w-8 h-8" />
+        <img src="/avatar.svg" alt="Profile Icon" className="w-8 h-8" />
       ),
       label: 'Profile',
     },

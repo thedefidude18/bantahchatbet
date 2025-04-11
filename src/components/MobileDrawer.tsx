@@ -25,17 +25,17 @@ const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) => {
 
   const socialLinks = [
     { 
-      icon: "/src/telegram.svg", 
+      icon: "/telegram.svg", 
       label: 'Telegram', 
       url: 'https://t.me/yourtelegram' 
     },
     { 
-      icon: "/src/twitter.svg", 
+      icon: "/twitter.svg", 
       label: 'Twitter', 
       url: 'https://twitter.com/yourtwitter' 
     },
     { 
-      icon: "/src/discord.svg", 
+      icon: "/discord.svg", 
       label: 'Discord', 
       url: 'https://discord.gg/yourdiscord' 
     },

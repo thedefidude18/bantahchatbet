@@ -58,7 +58,7 @@ const formatNumber = (num, currency) => {
   };
 
   return (
-    <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <header className="sticky top-4 z-50 mx-4">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Left Section */}
@@ -97,47 +97,42 @@ const formatNumber = (num, currency) => {
           <div className="flex items-center gap-4">
             {currentUser ? (
               <>
-
-
-
-
-               {/* Mesages */}
-               <button
+                {/* Leaderboard */}
+                <button
                   onClick={() => handleNavigate('/messages')}
                   className="p-2 rounded-full hover:bg-gray-100 transition-colors relative"
-                  aria-label="Messages"
+                  aria-label="Leaderboard"
                 >
                   <img 
-                    src="/src/leaderboard_icon.png" 
-                    alt="Leaderboard"
-                    className="h-5 w-5 text-black-600" 
+                    src="/messages-brutal.svg" 
+                    alt="messages-brutal"
+                    className="h-7 w-7 opacity-80 hover:opacity-100 transition-opacity" 
                   />
                 </button>
 
-
-                  {/* Leaderboard */}
+                {/* Leaderboard */}
                 <button
                   onClick={() => handleNavigate('/leaderboard')}
                   className="p-2 rounded-full hover:bg-gray-100 transition-colors relative"
                   aria-label="Leaderboard"
                 >
                   <img 
-                    src="/src/leaderboard_icon.png" 
+                    src="/leaderboard_icon.png" 
                     alt="Leaderboard"
-                    className="h-5 w-5 text-black-600" 
+                    className="h-5 w-5 opacity-80 hover:opacity-100 transition-opacity" 
                   />
                 </button>
 
-               {/* Notifications */}
+                {/* Notifications */}
                 <button
                   onClick={() => handleNavigate('/notifications')}
                   className="p-2 rounded-full hover:bg-gray-100 transition-colors relative"
                   aria-label="Notifications"
                 >
                   <img 
-                    src="/src/notify22.svg" 
+                    src="/notify22.svg" 
                     alt="Notifications"
-                    className="h-7 w-7 text-black-600" 
+                    className="h-7 w-7" 
                   />
                   {unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center">
