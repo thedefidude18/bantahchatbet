@@ -1,11 +1,14 @@
-import React, { useState, useEffect } from 'react';
+// src/components/ChatList.tsx
+import React, { useState, useEffect, useRef } from 'react'; // Import useRef
 import { Search } from 'lucide-react';
 import { Chat } from '../types/chat';
 import { useChat } from '../hooks/useChat';
 import UserAvatar from './UserAvatar';
 import LoadingSpinner from './LoadingSpinner';
 import { useAuth } from '../contexts/AuthContext';
-import { useLeaderboard } from '../hooks/useLeaderboard'; // Import the useLeaderboard hook
+import { useSearchUsers } from '../hooks/useSearchUsers'; // Replace useUserSearch import
+import { supabase } from '../lib/supabase';
+import { useToast } from '../contexts/ToastContext';
 
 interface ChatListProps {
   onChatSelect: (chat: Chat) => void;
@@ -21,74 +24,115 @@ interface ChatItem {
   unreadCount?: number;
 }
 
-// Define the User interface based on the data from useLeaderboard
-interface LeaderboardUser {
+interface SearchUser {
   id: string;
   name: string;
   username: string;
-  avatar_url: string;
-  // Add other properties if needed
+  avatar_url?: string;
+  stats?: { wins: number; total_matches: number };
 }
 
 const ChatList: React.FC<ChatListProps> = ({ onChatSelect, selectedChatId }) => {
   const { currentUser } = useAuth();
   const { chats, loading: loadingChats } = useChat();
-  const { users: allUsers, loading: loadingLeaderboard, fetchUsers } = useLeaderboard(); // Add fetchUsers
+  const { users: searchResults, loading: isSearchingUsers, searchUsers } = useSearchUsers(); // Replace useUserSearch with useSearchUsers
   const [searchQuery, setSearchQuery] = useState('');
-  const [isSearchingUsers, setIsSearchingUsers] = useState(false);
-  const [searchResults, setSearchResults] = useState<LeaderboardUser[]>([]);
+  const debounceTimeout = useRef<NodeJS.Timeout | null>(null); // Use useRef for the timeout
+  const toast = useToast();
 
   const filteredChats = chats?.filter(chat => {
     if (!searchQuery) return true;
     const otherParticipant = chat.participants?.find(p => p.user_id !== currentUser?.id);
-    return otherParticipant?.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return otherParticipant?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           otherParticipant?.username?.toLowerCase().includes(searchQuery.toLowerCase());
   }) ?? [];
 
   useEffect(() => {
-    const searchUsers = async () => {
-      if (searchQuery.trim().length >= 2) {
-        setIsSearchingUsers(true);
-        try {
-          await fetchUsers(searchQuery);
-          const results = allUsers.filter(user => 
-            user.id !== currentUser?.id && (
-              user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              user.username.toLowerCase().includes(searchQuery.toLowerCase())
-            )
-          );
-          setSearchResults(results);
-        } catch (error) {
-          console.error('Error searching users:', error);
-        } finally {
-          setIsSearchingUsers(false);
-        }
-      } else {
-        setSearchResults([]);
+    if (debounceTimeout.current) {
+      clearTimeout(debounceTimeout.current);
+    }
+
+    debounceTimeout.current = setTimeout(() => {
+      if (searchQuery.trim()) {
+        searchUsers(searchQuery);
+      }
+    }, 300);
+
+    return () => {
+      if (debounceTimeout.current) {
+        clearTimeout(debounceTimeout.current);
       }
     };
+  }, [searchQuery, searchUsers]);
 
-    const debounceTimeout = setTimeout(searchUsers, 300);
-    return () => clearTimeout(debounceTimeout);
-  }, [searchQuery, fetchUsers, currentUser?.id]);
-
-  const handleSelectUser = (user: LeaderboardUser) => {
-    // Logic to start a new chat with the selected user
-    console.log('Selected user:', user);
-    setSearchQuery('');
-    setSearchResults([]);
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
   };
 
-  if (loadingChats || loadingLeaderboard && isSearchingUsers) {
-    return (
-      <div className="flex items-center justify-center h-full bg-white">
-        <LoadingSpinner size="lg" color="#25D366" /> {/* WhatsApp green */}
-      </div>
-    );
+  const handleSelectUser = async (user: SearchUser) => {
+    try {
+      // Check if chat already exists
+      const existingChat = chats?.find(chat => 
+        chat.participants?.some(p => p.user_id === user.id)
+      );
+
+      if (existingChat) {
+        onChatSelect(existingChat);
+      } else {
+        // First create the chat
+        const { data: newChat, error: chatError } = await supabase
+          .from('chats')
+          .insert([{
+            created_by: currentUser?.id
+          }])
+          .select()
+          .single();
+
+        if (chatError) throw chatError;
+
+        // Then create the participants
+        if (newChat) {
+          const { error: participantsError } = await supabase
+            .from('chat_participants')
+            .insert([
+              { chat_id: newChat.id, user_id: currentUser?.id },
+              { chat_id: newChat.id, user_id: user.id }
+            ]);
+
+          if (participantsError) throw participantsError;
+
+          // Fetch the complete chat with participants
+          const { data: completeChat, error: fetchError } = await supabase
+            .from('chats')
+            .select(`
+              *,
+              participants:chat_participants(
+                user_id,
+                user:users(*)
+              )
+            `)
+            .eq('id', newChat.id)
+            .single();
+
+          if (fetchError) throw fetchError;
+          if (completeChat) {
+            onChatSelect(completeChat as Chat);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error creating chat:', error);
+      toast.showError('Failed to create chat');
+    }
+    setSearchQuery('');
+  };
+
+  if (loadingChats || isSearchingUsers) {
+    return <div className="flex items-center justify-center h-full bg-white"><LoadingSpinner size="lg" color="#25D366" /></div>;
   }
 
   return (
     <div className="h-screen flex flex-col bg-white">
-      {/* Top Section: Search */}
       <div className="bg-white sticky top-0 z-10 border-b border-gray-200">
         <div className="relative p-3">
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -96,13 +140,13 @@ const ChatList: React.FC<ChatListProps> = ({ onChatSelect, selectedChatId }) => 
             type="text"
             placeholder="Search or start new chat"
             value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
+            onChange={handleInputChange}
             className="w-full pl-10 pr-4 py-2 rounded-lg bg-gray-100 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500"
           />
-          {searchQuery && searchResults.length > 0 && (
+          {searchQuery && searchResults.length > 0 && ( // Use searchResults
             <div className="absolute top-full left-0 right-0 bg-white rounded-md shadow-md z-20">
               <ul>
-                {searchResults.map(user => (
+                {searchResults.map(user => ( // Use searchResults
                   <li key={user.id}>
                     <button
                       onClick={() => handleSelectUser(user)}
@@ -119,17 +163,19 @@ const ChatList: React.FC<ChatListProps> = ({ onChatSelect, selectedChatId }) => 
               </ul>
             </div>
           )}
-          {searchQuery && searchResults.length === 0 && !isSearchingUsers && (
+          {searchQuery && searchResults.length === 0 && !isSearchingUsers && ( // Use searchResults
             <div className="absolute top-full left-0 right-0 bg-white rounded-md shadow-md z-20 p-6 text-center">
               <div className="flex flex-col items-center space-y-3">
-                <span className="text-gray-400">
-                  <Search size={28} />
-                </span>
+                <Search size={28} />
                 <div>
-                  <p className="text-gray-700 font-medium text-base mb-1">No matching users found</p>
-                  <p className="text-sm text-gray-500">
-                    Please check the spelling or try a different search term
-                  </p>
+                  {searchQuery.length < 1 ? (
+                    <p className="text-sm text-gray-500">Type a name or username to search</p>
+                  ) : (
+                    <>
+                      <p className="text-gray-700 font-medium text-base mb-1">Can't find "{searchQuery}"</p>
+                      <p className="text-sm text-gray-500">Try using a different name or username</p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -137,44 +183,28 @@ const ChatList: React.FC<ChatListProps> = ({ onChatSelect, selectedChatId }) => 
         </div>
       </div>
 
-      {/* Chat List */}
       <div className="overflow-y-auto flex-grow bg-white">
-        {searchQuery && searchResults.length > 0 ? null : (
+        {searchQuery && searchResults.length > 0 ? null : ( // Use searchResults
           filteredChats.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full p-6 text-center">
-              <span className="text-gray-400 mb-3">
-                <Search size={28} />
-              </span>
-              <p className="text-gray-700 font-medium text-base mb-1">
-                {searchQuery ? 'No matching chats found' : 'No chats yet'}
-              </p>
-              <p className="text-sm text-gray-500">
-                {searchQuery ? 'Try different search terms' : 'Start a new chat to begin messaging'}
-              </p>
+              <span className="text-gray-400 mb-3"><Search size={28} /></span>
+              <p className="text-gray-700 font-medium text-base mb-1">{searchQuery ? 'No matching chats found' : 'No chats yet'}</p>
+              <p className="text-sm text-gray-500">{searchQuery ? 'Try different search terms' : 'Start a new chat to begin messaging'}</p>
             </div>
           ) : (
             <ul className="divide-y divide-gray-200">
               {filteredChats.map(chat => {
-                const otherParticipant = chat.participants?.find(
-                  p => p.user_id !== currentUser?.id
-                );
+                const otherParticipant = chat.participants?.find(p => p.user_id !== currentUser?.id);
                 const name = otherParticipant?.name || 'Unknown User';
                 const avatarUrl = otherParticipant?.avatar_url;
                 const lastMessage = chat.last_message?.content || 'No messages yet';
-                const timestamp = chat.last_message?.created_at
-                  ? new Date(chat.last_message.created_at).toLocaleTimeString([], {
-                      hour: 'numeric',
-                      minute: '2-digit',
-                    })
-                  : chat.timestamp;
+                const timestamp = chat.last_message?.created_at ? new Date(chat.last_message.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : chat.timestamp;
 
                 return (
                   <li key={chat.id}>
                     <button
                       onClick={() => onChatSelect(chat as Chat)}
-                      className={`w-full block py-3 px-4 hover:bg-gray-100 transition-colors ${
-                        chat.id === selectedChatId ? 'bg-green-50' : ''
-                      }`}
+                      className={`w-full block py-3 px-4 hover:bg-gray-100 transition-colors ${chat.id === selectedChatId ? 'bg-green-50' : ''}`}
                     >
                       <div className="flex items-center space-x-3">
                         <UserAvatar src={avatarUrl} alt={name} size="md" />
@@ -185,9 +215,7 @@ const ChatList: React.FC<ChatListProps> = ({ onChatSelect, selectedChatId }) => 
                         <div className="flex flex-col items-end">
                           {timestamp && <span className="text-xs text-gray-500">{timestamp}</span>}
                           {chat.unreadCount > 0 && (
-                            <div className="w-5 h-5 rounded-full bg-green-500 text-white text-xs flex items-center justify-center mt-1">
-                              {chat.unreadCount}
-                            </div>
+                            <div className="w-5 h-5 rounded-full bg-green-500 text-white text-xs flex items-center justify-center mt-1">{chat.unreadCount}</div>
                           )}
                         </div>
                       </div>

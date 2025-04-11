@@ -5,6 +5,7 @@ import { useToast } from '../contexts/ToastContext';
 import LoadingSpinner from './LoadingSpinner';
 import UserAvatar from './UserAvatar';
 import { Chat } from '../types/chat';
+import { supabase } from '../supabaseClient';
 
 interface ChatWindowProps {
   chat: Chat;
@@ -31,7 +32,16 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chat, onBack }) => {
 
     try {
       setSending(true);
-      // Implement your send message logic here
+      const { error } = await supabase
+        .from('messages')
+        .insert([{
+          chat_id: chat.id,
+          sender_id: currentUser?.id,
+          content: message.trim(),
+          type: 'text'
+        }]);
+
+      if (error) throw error;
       setMessage('');
       scrollToBottom();
     } catch (error) {
@@ -47,6 +57,26 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chat, onBack }) => {
     if (!file) return;
     toast.showInfo('File upload coming soon!');
   };
+
+  // Subscribe to new messages
+  useEffect(() => {
+    const subscription = supabase
+      .channel(`chat:${chat.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `chat_id=eq.${chat.id}`
+      }, payload => {
+        // Update messages in real-time
+        chat.messages = [...(chat.messages || []), payload.new];
+      })
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [chat.id]);
 
   // Get other participant's info
   const otherParticipant = chat.participants.find(p => p.user_id !== currentUser?.id);
