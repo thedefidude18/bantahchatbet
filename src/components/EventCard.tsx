@@ -30,7 +30,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, onChatClick }) => {
       return {
         label: '',
         bg: 'bg-red-500',
-        dot: 'bg-white',
+        dot: 'bg-red',
         text: 'text-white',
         animate: false,
       };
@@ -39,8 +39,8 @@ const EventCard: React.FC<EventCardProps> = ({ event, onChatClick }) => {
     if (now < startTime) {
       return {
         label: '',
-        bg: 'bg-amber-500',
-        dot: 'bg-white',
+        bg: 'bg-[#CCFF00]',
+        dot: 'bg-[#CCFF00]',
         text: 'text-white',
         animate: true,
       };
@@ -57,9 +57,9 @@ const EventCard: React.FC<EventCardProps> = ({ event, onChatClick }) => {
     }
 
     return {
-      label: '',
+      label: 'ENDED',
       bg: 'bg-gray-500',
-      dot: 'bg-white',
+      dot: 'bg-red-500',
       text: 'text-white',
       animate: false,
     };
