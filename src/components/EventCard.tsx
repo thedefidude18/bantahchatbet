@@ -21,29 +21,48 @@ const EventCard: React.FC<EventCardProps> = ({ event, onChatClick }) => {
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showChat, setShowChat] = useState(false);
 
-  const isActive = React.useMemo(() => {
+  const getEventStatus = () => {
     const now = new Date();
     const startTime = new Date(event.start_time);
     const endTime = new Date(event.end_time);
-    return now >= startTime && now <= endTime;
-  }, [event.start_time, event.end_time]);
 
-  const getTimeLeft = () => {
-    const now = new Date();
-    const end = new Date(event.end_time);
-    const diff = end.getTime() - now.getTime();
-
-    if (diff < 0) return 'Ended';
-
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-    if (hours > 24) {
-      const days = Math.floor(hours / 24);
-      return `${days}d left`;
+    if (event.status === 'CANCELLED') {
+      return {
+        label: '',
+        bg: 'bg-red-500',
+        dot: 'bg-white',
+        text: 'text-white',
+        animate: false,
+      };
     }
 
-    return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+    if (now < startTime) {
+      return {
+        label: '',
+        bg: 'bg-amber-500',
+        dot: 'bg-white',
+        text: 'text-white',
+        animate: true,
+      };
+    }
+
+    if (now >= startTime && now <= endTime) {
+      return {
+        label: '',
+        bg: 'bg-[#CCFF00]',
+        dot: 'bg-red-500',
+        text: 'text-black',
+        animate: true,
+      };
+    }
+
+    return {
+      label: '',
+      bg: 'bg-gray-500',
+      dot: 'bg-white',
+      text: 'text-white',
+      animate: false,
+    };
   };
 
   const handleJoinClick = () => {
@@ -59,37 +78,6 @@ const EventCard: React.FC<EventCardProps> = ({ event, onChatClick }) => {
     }
   };
 
-  const handleChatClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onChatClick(event);
-  };
-
-  const handleShareClick = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-
-    const eventData = generateEventOGData(event);
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: eventData.title,
-          text: eventData.description,
-          url: eventData.url
-        });
-      } catch (error) {
-        console.error('Error sharing:', error);
-      }
-    } else {
-      try {
-        await navigator.clipboard.writeText(eventData.url);
-        toast.success('Event link copied to clipboard!');
-      } catch (error) {
-        console.error('Failed to copy:', error);
-        toast.error('Failed to copy event link');
-      }
-    }
-  };
-
   const handleCloseChat = () => {
     setShowChat(false);
   };
@@ -97,7 +85,6 @@ const EventCard: React.FC<EventCardProps> = ({ event, onChatClick }) => {
   return (
     <>
       <div className="bg-black rounded-3xl overflow-hidden relative">
-        {/* Full image background */}
         <div className="relative w-full aspect-video">
           <img
             src={event.banner_url || DEFAULT_BANNER}
@@ -107,70 +94,78 @@ const EventCard: React.FC<EventCardProps> = ({ event, onChatClick }) => {
               e.currentTarget.src = DEFAULT_BANNER;
             }}
           />
-          {/* Shortened, fading top overlay for title and creator badge */}
-          <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/90 to-transparent pt-3 pb-1.5 flex flex-col items-center">
-            {isActive && (
-              <div className="flex items-center mb-0.5">
-                <div className="bg-indigo-600 rounded-full flex items-center gap-0.5 px-1.5 py-0.75">
-                  <div className="bg-white rounded-full h-2.5 w-2.5 flex items-center justify-center">
-                    <div className="text-indigo-600 text-[0.5rem] font-bold">✓</div>
-                  </div>
-                  <span className="text-white font-bold text-[0.7rem]">LIVE</span>
-                </div>
+
+          {/* Simplified Status Badge */}
+          {event.status !== 'HIDDEN' && (
+            <div className="absolute top-3 left-3 z-10">
+              <div className={`${getEventStatus().bg} w-3 h-3 rounded-full shadow-lg relative`}>
+                {getEventStatus().animate && (
+                  <div className={`absolute inset-0 ${getEventStatus().dot} rounded-full animate-ping opacity-75`} />
+                )}
+                <div className={`absolute inset-0 ${getEventStatus().dot} rounded-full`} />
               </div>
-            )}
+            </div>
+          )}
+
+          {/* Title Overlay */}
+          <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/80 to-transparent pt-3 pb-1.5 flex flex-col items-center">
             <h2 className="text-white text-lg font-bold leading-tight text-center mb-1">
               {event.title}
             </h2>
-            <div className="bg-orange-500 rounded-full flex items-center px-1.5 py-0.75">
-              <div className="overflow-hidden rounded-full h-4 w-4">
+            <div className="bg-black/20 backdrop-filter backdrop-blur-lg rounded-full flex items-center px-2 py-1.5">
+              <div className="overflow-hidden rounded-full h-3 w-3">
                 <img
                   src={event.creator.avatar || "/default-avatar.png"}
                   alt={event.creator.username}
                   className="w-full h-full object-cover"
                 />
               </div>
-              <span className="text-white font-bold ml-0.5 text-[0.7rem]">
+              <span className="text-cyan-400 font-bold ml-1 text-xs">
                 {event.creator.username || "mikki24"}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Bottom section */}
-        <div className="absolute bottom-0 left-0 right-0 p-4">
-          <div className="flex items-center justify-between">
-            {/* Event Pool section */}
-            <div className="flex flex-col">
-              <span className="text-white text-xl font-bold">Event Pool</span>
-              <div className="flex items-center gap-2 mt-1">
-                <div className="bg-white rounded-full px-3 py-1.5">
-                  <span className="text-black font-bold text-sm">
-                    ₦{event.pool?.total_amount?.toLocaleString() || '2,500.00'}
-                  </span>
+        {/* Bottom section with adjusted padding and alignment */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 flex items-end justify-between">
+          {/* Event Pool section */}
+          <div className="flex flex-col justify-end">
+            <span className="text-white text-xl font-bold">Event Pool</span>
+            <div className="flex items-center gap-2 mt-1">
+              <div className="bg-white rounded-full px-2 py-1">
+                <span className="text-black font-bold text-sm">
+                  ₦{event.pool?.total_amount?.toLocaleString() || '2,500.00'}
+                </span>
+              </div>
+              <div className="flex items-center">
+                <div className="overflow-hidden rounded-full h-5 w-5 border-2 border-orange-500 flex items-center justify-center">
+                  <img
+                    src={event.participants?.[0]?.avatar || event.creator.avatar || "/default-avatar.png"}
+                    alt="Participant"
+                    className="w-full h-full object-cover"
+                  />
                 </div>
-                <div className="flex items-center">
-                  <div className="overflow-hidden rounded-full h-5 w-5 bg-orange-500 flex items-center justify-center">
-                    <img
-                      src={event.participants?.[0]?.avatar || event.creator.avatar || "/default-avatar.png"}
-                      alt="Participant"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <span className="text-white font-bold ml-1 text-xs">+{event.participants?.length || 65}</span>
+                <div className="bg-white rounded-full ml-[-0.75rem] px-2 py-1 text-black font-bold text-xs">
+                  +{event.participants?.length || 65}
                 </div>
               </div>
             </div>
-
-            {/* Join Button */}
-            <button
-              onClick={handleJoinClick}
-              className={`bg-[#CCFF00] hover:bg-[#B8E600] text-black font-bold text-xl px-6 py-2 rounded-xl flex items-center justify-center gap-1 ${event.is_private ? '' : ''}`}
-            >
-              {event.is_private && <Lock className="h-4 w-4" />}
-              Join
-            </button>
           </div>
+
+          {/* Join Button */}
+          <button
+            onClick={handleJoinClick}
+            disabled={['CANCELLED', 'ENDED'].includes(event.status || getEventStatus().label)}
+            className={`${
+              ['CANCELLED', 'ENDED'].includes(event.status || getEventStatus().label)
+                ? 'bg-gray-500 cursor-not-allowed'
+                : 'bg-[#CCFF00] hover:bg-[#B8E600]'
+            } text-black font-bold text-xl px-4 py-1.5 rounded-xl h-10 flex items-center justify-center gap-1`}
+          >
+            {event.is_private && <Lock className="h-4 w-4" />} {/* Reduced Lock icon size */}
+            {['CANCELLED', 'ENDED'].includes(event.status || getEventStatus().label) ? 'Closed' : 'Join'}
+          </button>
         </div>
       </div>
 
