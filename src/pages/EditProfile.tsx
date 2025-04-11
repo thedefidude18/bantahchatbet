@@ -3,6 +3,7 @@ import { Share2, Gift, Users, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useReferral } from '../hooks/useReferral';
 import MobileFooterNav from '../components/MobileFooterNav';
+import LoadingSpinner from '../components/LoadingSpinner';
 import PageHeader from '../components/PageHeader';
 
 const Referral: React.FC = () => {
@@ -44,49 +45,55 @@ const Referral: React.FC = () => {
               <Users className="w-6 h-6 text-[#CCFF00]" />
             </div>
             <p className="text-white/60 text-sm">Total Referrals</p>
-            <p className="text-white font-bold text-xl">{stats?.totalReferrals}</p>
+            <p className="text-white font-bold text-xl">{stats.totalReferrals}</p>
           </div>
-
           <div className="bg-[#242538] rounded-xl p-4">
-            <div className="mb-2">
-              <Gift className="w-5 h-5 text-[#CCFF00]" />
+            <div className="w-12 h-12 bg-[#CCFF00]/20 flex items-center justify-center mb-2">
+              <Gift className="w-6 h-6 text-[#CCFF00]" />
             </div>
             <p className="text-white/60 text-sm">Earnings</p>
-            <p className="text-[#CCFF00] font-bold text-xl">₦ {stats?.totalRewards?.toLocaleString()}</p>
+            <p className="text-white font-bold text-xl">₦{stats.earnings}</p>
           </div>
-
           <div className="bg-[#242538] rounded-xl p-4">
-            <div className="mb-2">
-              <Share2 className="w-5 h-5 text-[#CCFF00]" />
+            <div className="w-12 h-12 bg-[#CCFF00]/20 flex items-center justify-center mb-2">
+              <Share2 className="w-6 h-6 text-[#CCFF00]" />
+            </div>
+            <p className="text-white/60 text-sm">Successful</p>
+            <p className="text-white font-bold text-xl">{stats.successfulReferrals}</p>
+          </div>
+          <div className="bg-[#242538] rounded-xl p-4">
+            <div className="w-12 h-12 bg-[#CCFF00]/20 flex items-center justify-center mb-2">
+              <TrendingUp className="w-6 h-6 text-[#CCFF00]" />
             </div>
             <p className="text-white/60 text-sm">Pending</p>
-            <p className="text-white font-bold text-xl">{stats?.pendingReferrals}</p>
-            <p className="text-white/60 text-sm">Successful</p>
-            <p className="text-white font-bold text-xl">{stats?.successfulReferrals}</p>
+            <p className="text-white font-bold text-xl">{stats.pendingReferrals}</p>
           </div>
+        </div>
 
-          <div className="bg-[#242538] rounded-xl p-6">
-            <h2 className="text-white font-bold mb-4">Your Referral Code</h2>
-            <div className="bg-[#1a1b2e] rounded-lg p-4 mb-4">
-              <div className="flex items-center justify-between">
-                <p className="font-syne text-2xl text-[#CCFF00] tracking-wider">
+        {/* Referral Code */}
+        <div className="bg-[#242538] rounded-xl p-6">
+          <h2 className="text-white font-bold mb-4">Your Referral Code</h2>
+          <div className="bg-[#1a1b2e] rounded-lg p-4 mb-4">
+            <div className="flex items-center justify-between">
+              <div className="w-8 h-8 rounded-lg bg-[#CCFF00]/20 flex items-center justify-center flex-shrink-0">
+                <span className="font-syne text-2xl text-[#CCFF00] tracking-wider">
                   {referralCode || '--------'}
-                </p>
-                <button
-                  onClick={handleCopy}
-                  className="px-4 py-2 bg-[#CCFF00]/20 text-[#CCFF00] rounded-lg hover:bg-[#CCFF00]/30 transition-colors"
-                >
-                  {copied ? 'Copied!' : 'Copy'}
-                </button>
+                </span>
               </div>
+              <button
+                onClick={handleCopy}
+                className="px-4 py-2 bg-[#CCFF00]/20 text-[#CCFF00] rounded-lg hover:bg-[#CCFF00]/30 transition-colors"
+              >
+                {copied ? 'Copied!' : 'Copy'}
+              </button>
             </div>
-            <button
-              onClick={handleShare}
-              className="w-full py-3 bg-[#CCFF00] text-black rounded-xl font-medium hover:bg-[#b3ff00] transition-colors"
-            >
-              Share Code
-            </button>
           </div>
+          <button
+            onClick={handleShare}
+            className="w-full py-3 bg-[#CCFF00] text-black rounded-xl font-medium hover:bg-[#b3ff00] transition-colors"
+          >
+            Share Code
+          </button>
         </div>
 
         {/* How it Works */}
@@ -117,24 +124,12 @@ const Referral: React.FC = () => {
               </div>
               <div>
                 <p className="text-white font-medium">Earn Rewards</p>
-                <p className="text-white/60 text-sm">Get rewarded when friends participate</p>
+                <p className="text-white/60 text-sm">Referral rewards are paid out when your referred friends join and participate in events</p>
               </div>
             </div>
           </div>
         </div>
-
-        {/* Terms */}
-        <div className="bg-[#242538] rounded-xl p-6">
-          <h2 className="text-white font-bold mb-4">Terms & Conditions</h2>
-          <ul className="list-disc list-inside text-white/60 text-sm space-y-2">
-            <li>Referral rewards are paid out when your referred friends join and participate in events</li>
-            <li>Each friend must use your referral code during sign up</li>
-            <li>Rewards are credited to your wallet automatically</li>
-            <li>Bantah reserves the right to modify or terminate the referral program at any time</li>
-          </ul>
-        </div>
       </div>
-
       <MobileFooterNav />
     </div>
   );

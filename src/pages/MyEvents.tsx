@@ -8,6 +8,7 @@ import EditEventModal from '../components/modals/EditEventModal';
 import Header from '../components/Header';
 import MobileFooterNav from '../components/MobileFooterNav';
 import { supabase } from '../lib/supabase';
+import PageHeader from '../components/PageHeader';
 
 const tabs = [
   { id: 'created', label: 'Created Events', icon: Star },
@@ -148,74 +149,62 @@ const MyEvents = () => {
   return (
     <>
       <div className="min-h-screen bg-[#1a1b2e]">
-        <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center h-16">
-              <button 
-                onClick={() => navigate(-1)}
-                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                aria-label="Go back"
+        <PageHeader title="My Events" />
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex gap-4 mb-6 overflow-x-auto">
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap ${
+                  activeTab === tab.id
+                    ? 'bg-[#CCFF00] text-black'
+                    : 'bg-[#242538] text-white'
+                }`}
               >
-                <ArrowLeft className="w-6 h-6" />
+                <tab.icon className="w-4 h-4" />
+                {tab.label}
               </button>
-              <h1 className="ml-4 text-xl font-bold">My Events</h1>
+            ))}
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center items-center h-64">
+              <LoadingSpinner />
             </div>
-          </div>
-        </header>
-
-      
-        <div className="flex gap-4 mb-6 overflow-x-auto">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap ${
-                activeTab === tab.id
-                  ? 'bg-[#CCFF00] text-black'
-                  : 'bg-[#242538] text-white'
-              }`}
-            >
-              <tab.icon className="w-4 h-4" />
-              {tab.label}
-            </button>
-          ))}
+          ) : (
+            <div className="space-y-4">
+              {getFilteredEvents().length === 0 ? (
+                <div className="bg-[#242538] rounded-lg p-6 text-center text-white">
+                  <p className="text-lg mb-2">No events found</p>
+                  <p className="text-sm text-gray-400">
+                    {activeTab === 'created' 
+                      ? "You haven't created any events yet" 
+                      : `No ${activeTab} events found`}
+                  </p>
+                </div>
+              ) : (
+                getFilteredEvents().map(renderEventCard)
+              )}
+            </div>
+          )}
+          {selectedEvent && (
+            <EditEventModal
+              event={selectedEvent}
+              isOpen={isEditModalOpen}
+              onClose={() => {
+                setIsEditModalOpen(false);
+                setSelectedEvent(null);
+              }}
+              onSuccess={() => {
+                setIsEditModalOpen(false);
+                setSelectedEvent(null);
+                fetchEvents();
+              }}
+            />
+          )}
         </div>
-
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <LoadingSpinner />
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {getFilteredEvents().length === 0 ? (
-              <div className="bg-[#242538] rounded-lg p-6 text-center text-white">
-                <p className="text-lg mb-2">No events found</p>
-                <p className="text-sm text-gray-400">
-                  {activeTab === 'created' 
-                    ? "You haven't created any events yet" 
-                    : `No ${activeTab} events found`}
-                </p>
-              </div>
-            ) : (
-              getFilteredEvents().map(renderEventCard)
-            )}
-          </div>
-        )}
-        {selectedEvent && (
-          <EditEventModal
-            event={selectedEvent}
-            isOpen={isEditModalOpen}
-            onClose={() => {
-              setIsEditModalOpen(false);
-              setSelectedEvent(null);
-            }}
-            onSuccess={() => {
-              setIsEditModalOpen(false);
-              setSelectedEvent(null);
-              fetchEvents();
-            }}
-          />
-        )}
       </div>
       <MobileFooterNav />
     </>
