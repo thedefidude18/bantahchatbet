@@ -86,12 +86,12 @@ const DesktopNav: React.FC = () => {
   ];
 
   return (
-    <div className="hidden lg:flex fixed left-0 top-0 bottom-0 w-[240px] bg-light-bg shadow-lg flex-col z-50">
+    <div className="hidden lg:flex fixed left-0 top-0 bottom-0 w-[200px] bg-light-bg border-r border-gray-200 flex-col z-40">
       {/* Logo Section */}
-      <div className="px-4 py-4">
-        <div className="flex items-center gap-3">
-          <Logo className="w-8 h-8 text-[#CCFF00]" />
-          <span className="text-black font-bold text-xl">Bantah</span>
+      <div className="px-3 py-4">
+        <div className="flex items-center gap-2">
+          <Logo className="w-7 h-7 text-[#CCFF00]" />
+          <span className="text-black font-bold text-lg">Bantah</span>
         </div>
       </div>
 
@@ -103,14 +103,14 @@ const DesktopNav: React.FC = () => {
             <button
               key={item.id}
               onClick={() => navigate(item.path)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl mb-1 transition-all ${
+              className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-xl mb-1 transition-all ${
                 isActive ? 'bg-white/10' : 'hover:bg-white/5'
               }`}
             >
               <div className={`${isActive ? 'text-[#CCFF00]' : 'text-white/100'}`}>
                 {item.icon}
               </div>
-              <span className={`font-medium ${
+              <span className={`font-medium text-sm ${
                 isActive ? 'text-[#CCFF00]' : 'text-black/80'
               }`}>
                 {item.label}
@@ -121,15 +121,15 @@ const DesktopNav: React.FC = () => {
       </nav>
 
       {/* Social Links Section */}
-      <div className="px-4 py-4 border-t border-white/10">
-        <div className="flex justify-center gap-4">
+      <div className="px-3 py-3 border-t border-gray-200">
+        <div className="flex justify-center gap-3">
           {socialLinks.map((social) => (
             <a
               key={social.label}
               href={social.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-2 hover:bg-white/10 rounded-full transition-all text-white/60 hover:text-white"
+              className="p-1.5 hover:bg-white/10 rounded-full transition-all text-white/60 hover:text-white"
               aria-label={social.label}
             >
               {social.icon}

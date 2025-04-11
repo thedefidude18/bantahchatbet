@@ -41,9 +41,9 @@ const App: React.FC = () => {
         <WalletProvider>
             <SettingsProvider>
               <SplashScreenProvider>
-                <div className="flex">
+                <div className="min-h-screen bg-gray-50">
                   {!isAuthPage && <DesktopNav />}
-                  <main className="flex-1">
+                  <main className="lg:ml-[200px] flex-1"> {/* Add margin to match nav width */}
                     <Routes>
                       {/* Public routes */}
                       <Route path="/signin" element={<SignIn />} />

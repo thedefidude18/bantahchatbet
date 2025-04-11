@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, Users, Clock, Trophy, MessageCircle, Share2 } from 'lucide-react';
+import { Lock, Users, Clock, MessageCircle, Share2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Event } from '../types/event';
@@ -42,7 +42,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, onChatClick }) => {
       const days = Math.floor(hours / 24);
       return `${days}d left`;
     }
-    
+
     return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
   };
 
@@ -66,9 +66,9 @@ const EventCard: React.FC<EventCardProps> = ({ event, onChatClick }) => {
 
   const handleShareClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     const eventData = generateEventOGData(event);
-    
+
     if (navigator.share) {
       try {
         await navigator.share({
@@ -96,97 +96,79 @@ const EventCard: React.FC<EventCardProps> = ({ event, onChatClick }) => {
 
   return (
     <>
-      <div className="bg-[#242538] rounded-xl overflow-hidden hover:scale-[1.02] transition-all duration-200 relative">
-        {/* Category Badge */}
-        <div className="absolute top-3 right-3 z-10">
-          <span className="bg-[#7C3AED] px-2 py-0.5 rounded-full text-white text-xs">
-            {event.category}
-          </span>
-        </div>
-
-        <div className="flex flex-col">
-          {/* Banner with Gradient Overlay */}
-          <div className="relative w-full h-32">
-            <img
-              src={event.banner_url || DEFAULT_BANNER}
-              alt={event.title}
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                e.currentTarget.src = DEFAULT_BANNER;
-              }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#242538] via-transparent to-transparent" />
-            
-            {/* Live Badge */}
+      <div className="bg-black rounded-3xl overflow-hidden relative">
+        {/* Full image background */}
+        <div className="relative w-full aspect-video">
+          <img
+            src={event.banner_url || DEFAULT_BANNER}
+            alt={event.title}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              e.currentTarget.src = DEFAULT_BANNER;
+            }}
+          />
+          {/* Shortened, fading top overlay for title and creator badge */}
+          <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/90 to-transparent pt-3 pb-1.5 flex flex-col items-center">
             {isActive && (
-              <div className="absolute top-2 left-2">
-                <div className="bg-[#CCFF00] px-1.5 py-0.5 rounded-full flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 bg-black rounded-full animate-pulse" />
-                  <span className="text-black text-[10px] font-medium">LIVE</span>
+              <div className="flex items-center mb-0.5">
+                <div className="bg-indigo-600 rounded-full flex items-center gap-0.5 px-1.5 py-0.75">
+                  <div className="bg-white rounded-full h-2.5 w-2.5 flex items-center justify-center">
+                    <div className="text-indigo-600 text-[0.5rem] font-bold">✓</div>
+                  </div>
+                  <span className="text-white font-bold text-[0.7rem]">LIVE</span>
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Content */}
-          <div className="p-3 space-y-3">
-            {/* Title Row */}
-            <div className="flex items-start gap-3">
-              <div className="flex-1">
-                <h3 className="text-white font-medium line-clamp-2 leading-tight">
-                  {event.title}
-                </h3>
-                <p className="text-white/60 text-sm mt-1">
-                  by @{event.creator.username}
-                </p>
+            <h2 className="text-white text-lg font-bold leading-tight text-center mb-1">
+              {event.title}
+            </h2>
+            <div className="bg-orange-500 rounded-full flex items-center px-1.5 py-0.75">
+              <div className="overflow-hidden rounded-full h-4 w-4">
+                <img
+                  src={event.creator.avatar || "/default-avatar.png"}
+                  alt={event.creator.username}
+                  className="w-full h-full object-cover"
+                />
               </div>
-              
-              {/* Action Buttons */}
-              <div className="flex flex-col gap-2">
-                <button
-                  onClick={handleShareClick}
-                  className="p-1.5 rounded-lg bg-[#2D2E4A] hover:bg-[#373860] text-white"
-                  aria-label="Share event"
-                >
-                  <Share2 className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={handleChatClick}
-                  className="p-1.5 rounded-lg bg-[#2D2E4A] hover:bg-[#373860] text-white"
-                  aria-label="Open chat"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                </button>
-              </div>
+              <span className="text-white font-bold ml-0.5 text-[0.7rem]">
+                {event.creator.username || "mikki24"}
+              </span>
             </div>
+          </div>
+        </div>
 
-            {/* Stats and Pool Amount Row */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4 text-white/60 text-sm">
-                <div className="flex items-center gap-1">
-                  <Users className="w-4 h-4" />
-                  <span>{event.participants?.length || 0}/{event.max_participants || '∞'}</span>
+        {/* Bottom section */}
+        <div className="absolute bottom-0 left-0 right-0 p-4">
+          <div className="flex items-center justify-between">
+            {/* Event Pool section */}
+            <div className="flex flex-col">
+              <span className="text-white text-xl font-bold">Event Pool</span>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="bg-white rounded-full px-3 py-1.5">
+                  <span className="text-black font-bold text-sm">
+                    ₦{event.pool?.total_amount?.toLocaleString() || '2,500.00'}
+                  </span>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Clock className="w-4 h-4" />
-                  <span>{getTimeLeft()}</span>
+                <div className="flex items-center">
+                  <div className="overflow-hidden rounded-full h-5 w-5 bg-orange-500 flex items-center justify-center">
+                    <img
+                      src={event.participants?.[0]?.avatar || event.creator.avatar || "/default-avatar.png"}
+                      alt="Participant"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <span className="text-white font-bold ml-1 text-xs">+{event.participants?.length || 65}</span>
                 </div>
-              </div>
-              <div className="text-right">
-                <p className="text-[#CCFF00] font-medium">
-                  ₦{event.pool?.total_amount?.toLocaleString() || '0'}
-                </p>
-                <p className="text-white/60 text-xs">Pool Amount</p>
               </div>
             </div>
 
             {/* Join Button */}
             <button
               onClick={handleJoinClick}
-              className="w-full py-1.5 rounded-lg font-medium text-sm bg-[#7C3AED] hover:bg-[#6D28D9] text-white flex items-center justify-center gap-1.5"
+              className={`bg-[#CCFF00] hover:bg-[#B8E600] text-black font-bold text-xl px-6 py-2 rounded-xl flex items-center justify-center gap-1 ${event.is_private ? '' : ''}`}
             >
-              {event.is_private && <Lock className="w-4 h-4" />}
-              {event.is_private ? 'Request to Join' : 'Join Event'}
+              {event.is_private && <Lock className="h-4 w-4" />}
+              Join
             </button>
           </div>
         </div>
