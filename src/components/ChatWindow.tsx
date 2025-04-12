@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
+import supabase from '../lib/supabase.js';
 import UserAvatar from './UserAvatar';
 import LoadingSpinner from './LoadingSpinner';
 import UserProfileCard from './UserProfileCard';

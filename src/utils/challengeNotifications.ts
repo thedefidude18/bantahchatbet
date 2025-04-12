@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import supabase from '../lib/supabase';
 import { NotificationType } from '../types/notifications';
 
 interface ChallengeNotificationParams {

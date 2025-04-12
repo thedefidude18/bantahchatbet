@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, Trophy, Calendar, Clock, AlertCircle, Info } from 'lucide-react';
 import { useWallet } from '../contexts/WalletContext';
 import { useToast } from '../contexts/ToastContext';
-import { supabase } from '../lib/supabase';
+import supabase from '../lib/supabase';
 import LoadingSpinner from './LoadingSpinner';
 
 type GameType = 'FIFA' | 'NBA2K' | 'OTHER';

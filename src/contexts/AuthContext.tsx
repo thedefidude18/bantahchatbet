@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import supabase from '@/lib/supabase.js';
 import { useToast } from './ToastContext';
 import type { User } from '@supabase/supabase-js';
 
@@ -25,8 +25,8 @@ export const useAuth = () => {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);//null
+  const [loading, setLoading] = useState(true); //true
   const toast = useToast();
 
   const refreshUser = useCallback(async () => {
@@ -136,7 +136,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'twitter',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`
+          redirectTo: `${window.location.origin}/dashboard`
         }
       });
 
@@ -161,26 +161,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => subscription.unsubscribe();
   }, [refreshUser]);
-
-  return (
-    <AuthContext.Provider value={{
-      currentUser,
-      loading,
-      signInWithEmail,
-      signUp,
-      logout,
-      refreshUser,
-      signInWithGoogle,
-      signInWithTwitter
-    }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  
+  return (<AuthContext.Provider value={{ currentUser,loading,signInWithEmail,signUp,logout,refreshUser,signInWithGoogle,signInWithTwitter }}>{children}</AuthContext.Provider>);
 };
-
-
-
-
-
-
 

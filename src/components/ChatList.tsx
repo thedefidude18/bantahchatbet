@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSearchUsers } from '../hooks/useSearchUsers';
 import { useToast } from '../contexts/ToastContext';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import supabase from '../lib/supabase.js';
 import UserProfileCard from './UserProfileCard';
 
 interface ChatListProps {

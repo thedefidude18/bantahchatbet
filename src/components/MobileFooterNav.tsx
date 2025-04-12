@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
+import supabase from '../lib/supabase';
 
 const MobileFooterNav: React.FC = () => {
   const navigate = useNavigate();
@@ -11,6 +11,7 @@ const MobileFooterNav: React.FC = () => {
   const [eventCount, setEventCount] = useState(0);
   const [challengeCount, setChallengeCount] = useState(0);
 
+  useEffect(() => {}, []);
   useEffect(() => {
     const fetchCounts = async () => {
       // Get active events count (excluding challenges)

@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import { Profile } from '../types/profile';
 import { supabase } from '../lib/supabase';
 
 interface PrivateMessage {
@@ -11,14 +12,40 @@ interface PrivateMessage {
   created_at: string;
   media_url?: string;
   sender?: {
-    name: string;
+    name: string | null;
     avatar_url: string | null;
     username: string | null;
   };
 }
 
+
 export function usePrivateChat(receiverId: string) {
   const [messages, setMessages] = useState<PrivateMessage[]>([]);
+  const getChatPartners = useCallback(async (user_id: string) => {
+    try {
+      const { data, error } = await supabase.rpc('get_chat_partners', {
+        user_id: user_id,
+      });
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error fetching chat partners:', error);
+    }
+  }, []);
+
+  const searchUsers = useCallback(async (searchTerm: string) => {
+    try {
+      const { data, error } = await supabase.rpc('get_users_search', {
+        
+        search_term: searchTerm,
+      });
+      if (error) throw error;
+      return data;
+    } catch (error) {      
+      console.error('Error fetching chat partners:', error);
+    }
+  }, []);
+
   const [isLoading, setIsLoading] = useState(true);
   const { currentUser } = useAuth();
   const toast = useToast();
@@ -89,16 +116,13 @@ export function usePrivateChat(receiverId: string) {
     }
   }, [currentUser, receiverId, toast]);
 
-  useEffect(() => {
-    if (!currentUser || !receiverId) return;
+   useEffect(() => {
+    if (!currentUser || !receiverId) return; 
 
     const subscription = supabase
       .from('private_messages')
       .on('INSERT', (payload) => {
-        if (
-          (payload.new.sender_id === currentUser.id && payload.new.receiver_id === receiverId) ||
-          (payload.new.sender_id === receiverId && payload.new.receiver_id === currentUser.id)
-        ) {
+        if ((payload.new.sender_id === currentUser.id && payload.new.receiver_id === receiverId) || (payload.new.sender_id === receiverId && payload.new.receiver_id === currentUser.id)) {
           setMessages(prev => [...prev, payload.new]);
         }
       })
@@ -107,10 +131,11 @@ export function usePrivateChat(receiverId: string) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [currentUser, receiverId]);
-
+  }, [currentUser, receiverId, fetchMessages]);
   return {
     messages,
+    searchUsers,
+    getChatPartners,
     sendMessage,
     isLoading,
     fetchMessages

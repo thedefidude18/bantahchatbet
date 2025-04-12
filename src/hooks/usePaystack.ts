@@ -2,7 +2,7 @@ import { useCallback, useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useWallet } from '../contexts/WalletContext';
 import { useToast } from '../contexts/ToastContext';
-import { supabase } from '../lib/supabase';
+import supabase from '../lib/supabase';
 
 interface PaystackResponse {
   reference: string;

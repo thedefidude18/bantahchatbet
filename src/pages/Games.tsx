@@ -22,7 +22,7 @@ import ActiveContentModal from '../components/modals/ActiveContentModal';
 
 // Hooks and contexts
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
+import supabase from '../lib/supabase';
 import { sendChallengeNotification } from '../utils/challengeNotifications';
 
 // Types
