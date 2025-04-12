@@ -7,11 +7,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSearchUsers } from '../hooks/useSearchUsers';
 import { useToast } from '../contexts/ToastContext';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase'; // Ensure you import supabase
+import { supabase } from '../lib/supabase';
 import UserProfileCard from './UserProfileCard';
 
 interface ChatListProps {
-  selectedChatId?: string; // To highlight the currently selected chat
+  selectedChatId?: string;
 }
 
 interface SearchUser {
@@ -32,13 +32,7 @@ interface ChatListItem {
   };
   lastMessage?: string;
   lastMessageTime?: Date | null;
-  unreadCount?: number; // You'll need logic to fetch this
-}
-
-interface Chat {
-  id: string;
-  created_at: string;
-  participants: string[];
+  unreadCount?: number;
 }
 
 const ChatList: React.FC<ChatListProps> = ({ selectedChatId }) => {
@@ -59,10 +53,11 @@ const ChatList: React.FC<ChatListProps> = ({ selectedChatId }) => {
         const { data, error } = await supabase
           .from('chats')
           .select(`
-            *,
+            id,
+            created_at,
             chat_participants!inner (
               user_id,
-              users_view!user_id (
+              users!users_view (
                 id,
                 name,
                 username,
@@ -71,7 +66,10 @@ const ChatList: React.FC<ChatListProps> = ({ selectedChatId }) => {
             ),
             messages (
               content,
-              created_at
+              created_at,
+              sender:users!sender_id (
+                username
+              )
             )
           `)
           .eq('chat_participants.user_id', currentUser?.id)
@@ -81,7 +79,7 @@ const ChatList: React.FC<ChatListProps> = ({ selectedChatId }) => {
 
         const formattedChats: ChatListItem[] = (data || []).map(chat => {
           const otherParticipant = chat.chat_participants
-            .find(p => p.user_id !== currentUser?.id)?.users_view;
+            .find(p => p.user_id !== currentUser?.id)?.users;
 
           return {
             id: chat.id,
@@ -93,7 +91,7 @@ const ChatList: React.FC<ChatListProps> = ({ selectedChatId }) => {
             },
             lastMessage: chat.messages?.[0]?.content,
             lastMessageTime: chat.messages?.[0]?.created_at ? new Date(chat.messages[0].created_at) : null,
-            unreadCount: 0, // Implement unread count logic here if needed
+            unreadCount: 0,
           };
         });
 
@@ -115,13 +113,11 @@ const ChatList: React.FC<ChatListProps> = ({ selectedChatId }) => {
     if (debounceTimeout.current) {
       clearTimeout(debounceTimeout.current);
     }
-
     debounceTimeout.current = setTimeout(() => {
       if (searchQuery.trim()) {
         searchUsers(searchQuery);
       }
     }, 300);
-
     return () => {
       if (debounceTimeout.current) {
         clearTimeout(debounceTimeout.current);
@@ -133,48 +129,61 @@ const ChatList: React.FC<ChatListProps> = ({ selectedChatId }) => {
     setSearchQuery(e.target.value);
   };
 
-  const handleSelectUser = async (user: SearchUser) => {
+  const handleSelectUser = async (selectedUser: SearchUser) => {
+    if (!currentUser?.id) {
+      toast.showError('You must be logged in to start a chat');
+      return;
+    }
+
     try {
       // Check if chat already exists
       const { data: existingChat } = await supabase
-        .from('chats')
-        .select('id')
-        .eq('chat_participants.user_id', currentUser?.id)
-        .eq('chat_participants.other_user_id', user.id)
+        .from('chat_participants')
+        .select('chat_id')
+        .eq('user_id', currentUser.id)
+        .eq('chat_id', chat => {
+          return chat
+            .from('chat_participants')
+            .select('chat_id')
+            .eq('user_id', selectedUser.id);
+        })
         .single();
 
       if (existingChat) {
-        navigate(`/chat/${existingChat.id}`);
+        navigate(`/chat/${existingChat.chat_id}`);
         return;
       }
 
       // Create new chat
       const { data: newChat, error: chatError } = await supabase
         .from('chats')
-        .insert([{ 
-          created_at: new Date().toISOString(),
-        }])
+        .insert([
+          {
+            type: 'direct',
+            event_id: null
+          }
+        ])
         .select()
         .single();
 
       if (chatError) throw chatError;
 
-      // Add chat participants
+      // Create chat participants
       const { error: participantsError } = await supabase
         .from('chat_participants')
         .insert([
-          { chat_id: newChat.id, user_id: currentUser?.id },
-          { chat_id: newChat.id, user_id: user.id }
+          { chat_id: newChat.id, user_id: currentUser.id },
+          { chat_id: newChat.id, user_id: selectedUser.id }
         ]);
 
       if (participantsError) throw participantsError;
 
+      // Navigate to the new chat
       navigate(`/chat/${newChat.id}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating chat:', error);
-      toast.showError('Failed to create chat');
+      toast.showError(error.message || 'Failed to create chat');
     }
-    setSearchQuery('');
   };
 
   const handleOpenChat = (chatId: string) => {
@@ -245,13 +254,13 @@ const ChatList: React.FC<ChatListProps> = ({ selectedChatId }) => {
       <div className="overflow-y-auto flex-grow bg-white">
         {selectedUser && (
           <div className="absolute inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <UserProfileCard 
-              user={selectedUser} 
+            <UserProfileCard
+              user={selectedUser}
               onClose={() => setSelectedUser(null)}
             />
           </div>
         )}
-        
+
         {searchQuery && searchResults.length > 0 ? null : (
           chatListItems.length === 0 && !loadingChats ? (
             <div className="flex flex-col items-center justify-center h-full p-6 text-center">
@@ -272,10 +281,10 @@ const ChatList: React.FC<ChatListProps> = ({ selectedChatId }) => {
                         onClick={(e) => handleProfileClick(e, chat.otherParticipant)}
                         className="focus:outline-none"
                       >
-                        <UserAvatar 
-                          src={chat.otherParticipant?.avatar_url} 
-                          alt={chat.otherParticipant?.name} 
-                          size="md" 
+                        <UserAvatar
+                          src={chat.otherParticipant?.avatar_url}
+                          alt={chat.otherParticipant?.name}
+                          size="md"
                         />
                       </button>
                       <div className="flex-1 min-w-0">

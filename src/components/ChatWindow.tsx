@@ -13,10 +13,20 @@ interface Message {
   content: string;
   created_at: string;
   sender_id: string;
-  sender?: {
+  chat_id: string;
+  sender: {
+    id: string;
     name: string;
+    username: string;
     avatar_url?: string;
   };
+}
+
+interface Chat {
+  id: string;
+  event_id: string | null;
+  type: string;
+  created_at: string;
 }
 
 const ChatWindow: React.FC = () => {
@@ -36,34 +46,13 @@ const ChatWindow: React.FC = () => {
           .from('messages')
           .select(`
             *,
-            sender:users_view!sender_id (
-              id,
-              full_name,
-              avatar_url
-            )
+            sender:users_view(id, name, username, avatar_url)
           `)
           .eq('chat_id', chatId)
           .order('created_at', { ascending: true });
-
-        if (error) throw error;
-        setMessages(data || []);
         
-        // Fetch other participant's info
-        const { data: chatData } = await supabase
-          .from('chat_participants')
-          .select(`
-            user:users_view!user_id (
-              id,
-              full_name,
-              username,
-              avatar_url
-            )
-          `)
-          .eq('chat_id', chatId)
-          .neq('user_id', currentUser?.id)
-          .single();
-          
-        setOtherUser(chatData?.user);
+        if (error) throw error;
+        setMessages(data);
       } catch (error) {
         console.error('Error loading messages:', error);
       } finally {
@@ -71,9 +60,56 @@ const ChatWindow: React.FC = () => {
       }
     };
 
-    if (chatId) {
+    const fetchOtherUser = async () => {
+      try {
+        const { data: chatData, error: chatError } = await supabase
+          .from('chats')
+          .select(`
+            id,
+            event_id,
+            type,
+            event:events(
+              id,
+              creator_id,
+              title
+            )
+          `)
+          .eq('id', chatId)
+          .single();
+
+        if (chatError) throw chatError;
+
+        if (chatData.event_id) {
+          // This is an event chat
+          const { data: eventParticipants, error: participantsError } = await supabase
+            .from('event_participants')
+            .select('user_id')
+            .eq('event_id', chatData.event_id)
+            .neq('user_id', currentUser?.id)
+            .single();
+
+          if (participantsError) throw participantsError;
+
+          if (eventParticipants) {
+            const { data: userData, error: userError } = await supabase
+              .from('users_view')
+              .select('*')
+              .eq('id', eventParticipants.user_id)
+              .single();
+
+            if (userError) throw userError;
+            setOtherUser(userData);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching other user:', error);
+      }
+    };
+
+    if (chatId && currentUser) {
       fetchMessages();
-      
+      fetchOtherUser();
+
       // Subscribe to new messages
       const subscription = supabase
         .channel(`chat:${chatId}`)
@@ -84,6 +120,7 @@ const ChatWindow: React.FC = () => {
           filter: `chat_id=eq.${chatId}`,
         }, payload => {
           setMessages(prev => [...prev, payload.new as Message]);
+          scrollToBottom(); // Scroll to bottom on new message
         })
         .subscribe();
 
@@ -91,7 +128,7 @@ const ChatWindow: React.FC = () => {
         subscription.unsubscribe();
       };
     }
-  }, [chatId, currentUser?.id]);
+  }, [chatId, currentUser]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -142,8 +179,8 @@ const ChatWindow: React.FC = () => {
 
       {showProfile && otherUser && (
         <div className="absolute inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <UserProfileCard 
-            user={otherUser} 
+          <UserProfileCard
+            user={otherUser}
             onClose={() => setShowProfile(false)}
           />
         </div>
@@ -156,7 +193,8 @@ const ChatWindow: React.FC = () => {
             content={message.content}
             timestamp={message.created_at}
             isSender={message.sender_id === currentUser?.id}
-            isRead={message.read}
+            isRead={false} // You'll need to implement read status logic
+            senderAvatar={message.sender?.avatar_url}
           />
         ))}
         <div ref={messagesEndRef} />
