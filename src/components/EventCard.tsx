@@ -6,7 +6,6 @@ import { Event } from '../types/event';
 import JoinRequestModal from './JoinRequestModal';
 import { toast } from 'react-toastify';
 import { generateEventOGData } from '../utils/opengraph';
-import NewEventChat from './NewEventChat';
 
 const DEFAULT_BANNER = 'https://images.unsplash.com/photo-1518546305927-5a555bb7020d?w=800&auto=format&fit=crop';
 
@@ -19,7 +18,6 @@ const EventCard: React.FC<EventCardProps> = ({ event, onChatClick }) => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
   const [showJoinModal, setShowJoinModal] = useState(false);
-  const [showChat, setShowChat] = useState(false);
 
   const getEventStatus = () => {
     const now = new Date();
@@ -74,12 +72,17 @@ const EventCard: React.FC<EventCardProps> = ({ event, onChatClick }) => {
     if (event.is_private) {
       setShowJoinModal(true);
     } else {
-      setShowChat(true);
+      // Navigate to the NewEventChat page with the event ID
+      navigate(`/event/${event.id}/chat`);
     }
   };
 
-  const handleCloseChat = () => {
-    setShowChat(false);
+  const handleJoinRequestSubmit = () => {
+    setShowJoinModal(false);
+    // In a real application, you would handle the join request submission here
+    // Upon successful request (or immediate join for non-private events),
+    // you would navigate to the chat page.
+    navigate(`/event/${event.id}/chat`);
   };
 
   return (
@@ -172,10 +175,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, onChatClick }) => {
       <JoinRequestModal
         isOpen={showJoinModal}
         onClose={() => setShowJoinModal(false)}
-        onSubmit={() => {
-          setShowJoinModal(false);
-          setShowChat(true);
-        }}
+        onSubmit={handleJoinRequestSubmit}
         eventTitle={event.title}
         wagerAmount={event.pool?.total_amount || 0}
         creator={event.creator}
@@ -186,8 +186,6 @@ const EventCard: React.FC<EventCardProps> = ({ event, onChatClick }) => {
           currentParticipants: event.current_participants || 0
         }}
       />
-
-      {showChat && <NewEventChat eventId={event.id} onClose={handleCloseChat} />}
     </>
   );
 };

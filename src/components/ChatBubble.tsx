@@ -8,6 +8,7 @@ interface ChatBubbleProps {
   isSender: boolean;
   isRead?: boolean;
   senderName?: string;
+  hasAvatar?: boolean; // Optional prop to indicate if there's an avatar
 }
 
 const ChatBubble: React.FC<ChatBubbleProps> = ({
@@ -15,25 +16,38 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({
   timestamp,
   isSender,
   isRead,
-  senderName
+  senderName,
+  hasAvatar = false,
 }) => {
   return (
-    <div className={`flex flex-col ${isSender ? 'items-end' : 'items-start'}`}>
-      {!isSender && senderName && (
-        <span className="text-xs text-gray-500 ml-2 mb-1">@{senderName}</span>
-      )}
-      <div className={`max-w-[70%] break-words rounded-2xl px-4 py-2 ${
-        isSender ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-900'
-      }`}>
-        <p>{content}</p>
-        <div className={`flex items-center justify-end gap-1 mt-1 text-xs ${
-          isSender ? 'text-blue-100' : 'text-gray-500'
-        }`}>
-          <span>{format(new Date(timestamp), 'HH:mm')}</span>
-          {isSender && (
-            <span>{isRead ? <CheckCheck size={14} /> : <Check size={14} />}</span>
+    <div className={`flex ${isSender ? 'flex-row-reverse items-start' : 'items-start'} mb-2`}>
+      {/* Space for Avatar */}
+      {!isSender && hasAvatar && <div className="w-8 h-8 mr-2 rounded-full bg-gray-300"></div>}
+      {isSender && hasAvatar && <div className="w-8 h-8 ml-2 rounded-full bg-gray-300"></div>}
+
+      <div className="flex flex-col">
+        <div className={`${isSender ? 'items-end' : 'items-start'}`}>
+          {!isSender && senderName && (
+            <span className="text-xs text-gray-500 mb-0.5">@{senderName}</span>
           )}
+          <div
+            className={`rounded-md px-3 py-2 break-words shadow-sm ${
+              isSender
+                ? 'bg-blue-600 text-white rounded-bl-md'
+                : 'bg-gray-200 text-gray-900 rounded-br-md'
+            }`}
+          >
+            <p className="text-sm leading-snug">{content}</p>
+          </div>
         </div>
+        <span
+          className={`text-[0.7rem] text-gray-500 mt-0.5 ${isSender ? 'text-right' : 'text-left'}`}
+        >
+          {format(new Date(timestamp), 'HH:mm')}
+          {isSender && (
+            <span className="ml-1">{isRead ? <CheckCheck size={10} /> : <Check size={10} />}</span>
+          )}
+        </span>
       </div>
     </div>
   );

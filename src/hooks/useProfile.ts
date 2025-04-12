@@ -33,7 +33,7 @@ export function useProfile() {
 
       // Fetch profile using the RPC function
       const { data, error } = await supabase
-        .rpc('get_profile_by_identifier', { search_identifier: identifier })
+        .rpc('get_profile_by_identifier', { p_username: identifier })
         .single();
 
       if (error) throw error;

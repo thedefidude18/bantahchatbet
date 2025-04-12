@@ -30,6 +30,7 @@ import Messages from './pages/Messages';
 import Notifications from './pages/Notifications';
 import TaxiShare from './pages/TaxiShare';
 import ChallengeChat from './pages/ChallengeChat';
+import EventChatWrapper from './components/EventChatWrapper';
 
 const App: React.FC = () => {
   const location = useLocation();
@@ -132,6 +133,14 @@ const App: React.FC = () => {
                         element={
                           <ProtectedRoute>
                             <ChallengeChat />
+                          </ProtectedRoute>
+                        } 
+                      />
+                      <Route 
+                        path="/event/:eventId/chat" 
+                        element={
+                          <ProtectedRoute>
+                            <EventChatWrapper />
                           </ProtectedRoute>
                         } 
                       />

@@ -1,15 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Send, Loader, MoreVertical } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { ArrowLeft, Send, Smile, Loader } from 'lucide-react';
+import { useAuth, AuthUser } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import UserAvatar from './UserAvatar';
 import { useEventChat } from '../hooks/useEventChat';
+import ChatBubble from './ChatBubble';
+import { formatDistanceToNow } from 'date-fns';
+import ProfileCard from './ProfileCard';
 
-interface NewEventChatProps {
+import { useProfile } from '../hooks/useProfile';
+export interface NewEventChatProps {
   eventId: string;
-  eventPoolAmount: string;
-  eventCreatorId: string;
-  onClose: () => void;
+  eventName: string;
+  eventCreatorUsername: string;
+  eventPoolAmount: number;
+  eventStartTime: string;
+  eventEndTime: string;
+  numberOfMembers: number;
+  onBack: () => void;
 }
 
 interface ChatMessage {
@@ -18,23 +26,77 @@ interface ChatMessage {
   created_at: string;
   sender_id: string;
   sender?: {
-    name: string;
+    username: string;
     avatar_url: string;
+    isVerified?: boolean;
   };
+  reactions?: { [key: string]: string[] };
 }
 
-const NewEventChat: React.FC<NewEventChatProps> = ({ eventId, eventPoolAmount, eventCreatorId, onClose }) => {
+const CompactBanner: React.FC<{ eventPoolAmount: number; countdown: string }> = (
+  {
+  eventPoolAmount,
+  countdown,
+}) => (
+  <div className="bg-purple-700 text-white rounded-xl shadow-md m-2 overflow-hidden">
+    <div className="flex flex-col items-center justify-center p-3">
+      <p className="text-sm font-semibold mb-1">Omah Lay will drop a new</p>
+      <div className="flex items-center space-x-2">
+        <div className="flex items-center">
+          <div className="bg-green-500 text-white rounded-full px-3 py-1 text-xs font-semibold flex items-center justify-center w-16 h-8">
+            YES 55
+          </div>
+        </div>
+        <div className="flex items-center">
+          <div className="bg-red-500 text-white rounded-full px-3 py-1 text-xs font-semibold flex items-center justify-center w-16 h-8">
+            NO 16
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center mt-2 text-xs text-white">
+        <span className="mr-2">Event Pool ₦ {(eventPoolAmount / 1000).toFixed(1)}K</span>
+        <span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="inline-block h-3 w-3 mr-1 align-text-top"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={1.5}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          {countdown}
+        </span>
+      </div>
+    </div>
+  </div>
+);
+
+const NewEventChat: React.FC<NewEventChatProps> = ({
+  eventId,
+  eventName,
+  eventCreatorUsername,
+  eventPoolAmount,
+  eventEndTime,
+  numberOfMembers,
+  onBack,
+}) => {  const { getProfile } = useProfile();
   const { currentUser } = useAuth();
   const toast = useToast();
   const { messages, sendMessage, isLoading } = useEventChat(eventId);
+
   const [message, setMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [selectedProfile, setSelectedProfile] = useState<ChatMessage['sender'] | null>(null);
+  const [countdown, setCountdown] = useState('');
 
-  const isCurrentUserAdmin = currentUser?.id === eventCreatorId;
+  const [creatorAvatar, setCreatorAvatar] = useState<string | null>(null);
+  const isCurrentUserAdmin = currentUser?.username === eventCreatorUsername;
 
-  const handleSubmit = async () => {
-    if (message.trim()) {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (message.trim() && currentUser) {
       const success = await sendMessage(message.trim());
       if (!success) {
         toast.showError('Failed to send message');
@@ -43,106 +105,181 @@ const NewEventChat: React.FC<NewEventChatProps> = ({ eventId, eventPoolAmount, e
     }
   };
 
-  const handleYes = () => {
-    toast.showInfo('Yes action (implementation needed)');
+  const openProfileCard = (sender: ChatMessage['sender']) => {
+    setSelectedProfile(sender);
   };
 
-  const handleNo = () => {
-    toast.showInfo('No action (implementation needed)');
-  };
+  useEffect(() => {
+    const fetchCreatorProfile = async () => {
+      const profile = await getProfile(eventCreatorUsername);
+      if (profile) {
+        setCreatorAvatar(profile.avatar_url);
+      }
+    };
 
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
-  };
+    fetchCreatorProfile();
+  }, [eventCreatorUsername, getProfile]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  useEffect(() => {
+    const updateCountdown = () => {
+      try {
+        const endTime = new Date(eventEndTime);
+        const now = new Date();
+        if (!isNaN(endTime.getTime())) {
+          if (endTime > now) {
+            const diff = endTime.getTime() - now.getTime();
+            const hours = String(Math.floor(diff / (1000 * 60 * 60))).padStart(2, '0');
+            const minutes = String(Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
+            const seconds = String(Math.floor((diff % (1000 * 60)) / 1000)).padStart(2, '0');
+            setCountdown(`${hours}h ${minutes}m ${seconds}s`);
+          } else {
+            setCountdown('Event ended');
+          }
+        } else {
+          setCountdown('Invalid end time');
+        }
+      } catch (error) {
+        console.error('Error parsing event end time:', error);
+        setCountdown('Error');
+      }
+    };
+
+    updateCountdown();
+    const intervalId = setInterval(updateCountdown, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [eventEndTime]);
+
   return (
-    <div className="fixed inset-0 z-50 bg-[#0F111A]/90 flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-3xl rounded-2xl overflow-hidden shadow-xl">
-        <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-white">
-          <div className="flex items-center gap-4">
-            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-              <ArrowLeft className="w-6 h-6" />
-            </button>
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">Event Chat</h2>
-              <p className="text-sm text-gray-500">Pool: {eventPoolAmount}</p>
-            </div>
+    <div className="flex flex-col h-screen bg-purple-50">
+      {/* Top Bar */}
+      <div className="bg-purple-700 text-white p-3 flex items-center shadow-sm z-10 rounded-br-xl">
+        <button onClick={onBack} className="mr-3">
+          <ArrowLeft size={24} />
+        </button>
+        <div className="flex items-center">
+          <UserAvatar url={creatorAvatar || '/bantahlogo.png'} size="sm" />
+          <div className="ml-2">
+            <h6 className="font-semibold">{eventName}</h6>
+            <p className="text-xs text-purple-200 flex items-center">
+            <img
+                src={creatorAvatar || "/bantahlogo.png"}
+                alt={eventCreatorUsername}
+                className="w-4 h-4 rounded-full object-cover mr-1"
+              />
+              <span>{eventCreatorUsername} • {numberOfMembers} Members</span>
+            </p>
           </div>
-          <div className="flex gap-3">
-            <button onClick={handleYes} className="px-4 py-2 text-sm font-medium text-white bg-green-500 rounded-full hover:bg-green-600 transition-colors">
-              Yes
-            </button>
-            <button onClick={handleNo} className="px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-full hover:bg-red-600 transition-colors">
-              No
-            </button>
-            {isCurrentUserAdmin && (
-              <div className="relative">
-                <button onClick={toggleMenu} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                  <MoreVertical className="w-6 h-6" />
-                </button>
-                {isMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-xl z-10">
-                    <button className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left">Block User (placeholder)</button>
-                    <button className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left">Ban User (placeholder)</button>
-                    <button className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left">Report (placeholder)</button>
-                    <button className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left">Share (placeholder)</button>
-                    <button className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left">Edit (placeholder)</button>
+        </div>
+
+  
+      <div className="ml-auto">
+          <span className="bg-purple-600 text-white rounded-full px-2 py-1 text-xs font-semibold">
+            ₦ {(eventPoolAmount / 1000).toFixed(1)}K
+          </span>
+        </div>
+      </div>
+
+      {/* Compact Banner with YES/NO and Event Info */}
+      <CompactBanner eventPoolAmount={eventPoolAmount} countdown={countdown} />
+
+      {/* Chat Messages Area */}
+      <div className="flex-grow overflow-y-auto p-3 space-y-2">
+        {isLoading && (
+          <div className="flex justify-center items-center py-10">
+            <Loader className="animate-spin text-purple-700" size={32} />
+          </div>
+        )}
+        {!isLoading &&
+          messages.map((msg: ChatMessage) => {
+            const isCurrentUserSender = msg.sender_id === currentUser?.id;
+
+            return (
+              <div
+                key={msg.id}
+                className={`flex ${isCurrentUserSender ? 'justify-end' : 'justify-start'} items-start mb-2`}
+              >
+                {!isCurrentUserSender && msg.sender && (
+                  <div className="mr-2 cursor-pointer" onClick={() => openProfileCard(msg.sender!)}>
+                    <UserAvatar url={msg.sender.avatar_url} size="sm" />
+                  </div>
+                )}
+                <div className="flex flex-col">
+                  <div className={`${isCurrentUserSender ? 'items-end' : 'items-start'}`}>
+                    {!isCurrentUserSender && msg.sender?.username && (
+                      <span className="text-xs text-gray-500 mb-0.5">@{msg.sender.username}</span>
+                    )}
+                    <ChatBubble
+                      content={msg.content}
+                      timestamp={msg.created_at}
+                      isSender={isCurrentUserSender}
+                      senderName={!isCurrentUserSender ? msg.sender?.username : undefined}
+                      hasAvatar={!isCurrentUserSender}
+                    />
+                  </div>
+                </div>
+                {isCurrentUserSender && currentUser?.avatar_url && (
+                  <div className="ml-2">
+                    <UserAvatar url={currentUser.avatar_url} size="sm" />
                   </div>
                 )}
               </div>
-            )}
-          </div>
-        </div>
+            );
+          })}
+        <div ref={messagesEndRef} />
+      </div>
 
-        <div className="h-[65vh] overflow-y-auto p-6 space-y-4 bg-gray-50">
-          {isLoading ? (
-            <div className="flex justify-center items-center h-full">
-              <Loader className="w-8 h-8 text-indigo-500 animate-spin" />
-            </div>
-          ) : (
-            messages
-              .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-              .map((msg) => (
-                <div key={msg.id} className="flex items-start gap-2">
-                  <UserAvatar url={msg.sender?.avatar_url || '/default-avatar.png'} username={msg.sender?.name || 'User'} size="sm" />
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium text-gray-700">{msg.sender?.name || 'User'}</span>
-                    <p className="text-sm text-gray-800 bg-gray-100 rounded-lg p-2">{msg.content}</p>
-                  </div>
-                </div>
-              ))
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-
-        <div className="p-4 bg-white border-t border-gray-100">
-          <div className="flex items-center gap-3">
-            <UserAvatar url={currentUser?.user_metadata?.avatar_url || '/default-avatar.png'} username={currentUser?.user_metadata?.full_name || 'You'} size="sm" />
-            <input
-              type="text"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
-              placeholder="Type your message..."
-              className="flex-1 bg-gray-100 text-gray-900 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
+      {/* Profile Card Modal */}
+      {selectedProfile && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-4 w-full max-w-md">
             <button
-              onClick={handleSubmit}
-              disabled={!message.trim() || isLoading}
-              className={`p-2 rounded-full transition-colors ${
-                !message.trim() || isLoading
-                  ? 'bg-gray-200 text-gray-500'
-                  : 'bg-indigo-500 text-white hover:bg-indigo-600'
-              }`}
+              onClick={() => setSelectedProfile(null)}
+              className="absolute top-2 right-2 p-2 rounded-full hover:bg-gray-100"
             >
-              <Send className="w-5 h-5" />
+              <X size={20} />
             </button>
+            <ProfileCard
+              profile={{
+                ...selectedProfile,
+                id: selectedProfile.username,
+                name: selectedProfile.username,
+                bio: '',
+                is_following: false,
+                followers_count: 0,
+                avatar_url: selectedProfile.avatar_url,
+              }}
+              onClose={() => setSelectedProfile(null)}
+            />
           </div>
         </div>
+      )}
+
+      {/* Input Area */}
+      <div className="bg-white border-t border-gray-200 p-3 flex items-center space-x-2 sticky bottom-0">        
+        <button className="text-gray-500 hover:text-purple-700 p-2 rounded-full">
+          <Smile size={20} />
+        </button>
+        <form onSubmit={handleSubmit} className="flex-grow relative">
+          <input
+            type="text"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Start a message"
+            className="bg-gray-100 rounded-full p-2 px-4 focus:outline-none focus:ring-1 focus:ring-purple-500 flex-grow text-sm pr-10"
+          />
+          <button
+            type="submit"
+            className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-purple-700 text-white rounded-full p-2 hover:bg-purple-800 disabled:opacity-50"
+            disabled={!message.trim() || isLoading}
+          >
+            <Send size={20} />
+          </button>
+        </form>
       </div>
     </div>
   );
