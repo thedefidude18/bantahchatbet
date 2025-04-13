@@ -177,10 +177,15 @@ const CreateChallengeForm: React.FC<CreateChallengeFormProps> = ({
       if (error) throw error;
 
       // Handle social challenge success
-      const [[, socialUsername], [platform]] = Object.entries(socialUsernames)
+      let socialUsername, platform;
+      const socialEntries = Object.entries(socialUsernames)
         .filter(([, username]) => username)
-        .slice(0, 1)
-        .map(([platform, username]) => [platform, username]);
+        .slice(0, 1);
+
+      if (socialEntries.length > 0) {
+        [, socialUsername] = socialEntries[0];
+        [platform] = socialEntries[0];
+      }
       
       if (socialUsername && platform) {
         setSuccessChallenge({

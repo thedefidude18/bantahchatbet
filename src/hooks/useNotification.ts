@@ -6,6 +6,7 @@ import { useToast } from '../contexts/ToastContext';
 export function useNotification() {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
   const { currentUser } = useAuth();
   const toast = useToast();
 
@@ -25,9 +26,11 @@ export function useNotification() {
             .from('notifications')
             .select('*')
             .eq('user_id', currentUser.id)
-            .order('created_at', { ascending: false });
-
+            .order('created_at', { ascending: false })
+            
           if (fetchError) throw fetchError;
+
+          setUnreadCount(data?.filter(n => !n.read_at).length || 0);
           
           setNotifications(data || []);
           return; // Success, exit the retry loop
@@ -49,15 +52,64 @@ export function useNotification() {
     } finally {
       setLoading(false);
     }
-  }, [currentUser?.id, toast]);
+  }, [currentUser?.id, toast]); 
+
+    const markAsRead = useCallback(async (notificationId: string) => {
+        if (!currentUser?.id) return;
+    
+        try {
+          const { error } = await supabase
+            .from('notifications')
+            .update({ read_at: new Date() })
+            .eq('id', notificationId)
+            .eq('user_id', currentUser.id);
+    
+          if (error) throw error;
+    
+          // Update local state
+          setNotifications(notifications.map(n =>
+            n.id === notificationId ? { ...n, read_at: new Date() } : n
+          ));
+          setUnreadCount(unreadCount - 1);
+          toast.showSuccess('Notification marked as read');
+        } catch (error) {
+          console.error('Error marking notification as read:', error);
+          toast.showError('Failed to mark notification as read');
+        }
+      }, [currentUser?.id, notifications, unreadCount, toast]);
+    
+      const markAllAsRead = useCallback(async () => {
+        if (!currentUser?.id) return;
+    
+        try {
+          const { error } = await supabase
+            .from('notifications')
+            .update({ read_at: new Date() })
+            .eq('user_id', currentUser.id)
+            .is('read_at', null);
+    
+          if (error) throw error;
+    
+          // Update local state
+          setNotifications(notifications.map(n => ({ ...n, read_at: new Date() })));
+          setUnreadCount(0);
+          toast.showSuccess('All notifications marked as read');
+        } catch (error) {
+          console.error('Error marking all notifications as read:', error);
+          toast.showError('Failed to mark notifications as read');
+        }
+      }, [currentUser?.id, notifications, toast]);
 
   useEffect(() => {
     fetchNotifications();
   }, [fetchNotifications]);
 
   return {
-    notifications,
-    loading,
-    refetchNotifications: fetchNotifications
-  };
-}
+        notifications,
+        unreadCount,
+        loading,
+        refetchNotifications: fetchNotifications,
+        markAsRead,
+        markAllAsRead,
+      };
+    }

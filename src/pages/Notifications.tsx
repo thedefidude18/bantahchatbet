@@ -51,30 +51,23 @@ const filters = [
 
 const Notifications = () => {
   const navigate = useNavigate();
-  const { notifications, loading, markAsRead, markAllAsRead } = useNotification();
+  const { notifications, loading, unreadCount, refetchNotifications, markAsRead, markAllAsRead } = useNotification();
   const { currentUser } = useAuth();
   const [filter, setFilter] = useState<string>('all');
   const [error, setError] = useState<string | null>(null);
   const toast = useToast();
 
   const filterNotifications = React.useMemo(() => {
-      console.log(`Filtering ${notifications.length} notifications for ${filter} filter`);
+    return notifications.filter(notification => {
+      const { notification_type, metadata } = notification;
       
-      return notifications.filter(notification => {
-        const { notification_type, metadata } = notification;
-        
-        if (filter === 'all') return true;
-        
-        const filterConfig = filters.find(f => f.id === filter);
-        if (!filterConfig) return false;
-        
-        if (notification_type === 'system') {
-          return filter === 'system' || metadata?.category === filter;
-        }
-        
-        return filterConfig.types.includes(notification_type);
-      });
-    }, [notifications, filter]);
+      if (filter === 'all') return true;
+      
+      const filterConfig = filters.find(f => f.id === filter);
+      if (!filterConfig) return false;
+      return filterConfig.types.includes(notification_type);
+    });
+  }, [notifications, filter]);
 
   const handleMarkAllRead = async () => {
     try {
@@ -155,6 +148,8 @@ const Notifications = () => {
                   }`}
                 >
                   <div className="flex justify-between items-start">
+                   
+
                     <div className="text-white">
                       <p className="font-medium">{notification.title}</p>
                       <p className="text-gray-400">{notification.content}</p>
@@ -162,6 +157,13 @@ const Notifications = () => {
                         {new Date(notification.created_at).toLocaleDateString()}
                       </p>
                     </div>
+                     {notification.metadata?.banner_url && (
+                      <img
+                        src={notification.metadata.banner_url}
+                        alt="Event Banner"
+                        className="mt-2 rounded-md w-full h-40 object-cover"
+                      />
+                    )}
                     {!notification.read_at && (
                       <button
                         onClick={() => handleMarkAsRead(notification.id)}

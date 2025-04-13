@@ -185,7 +185,39 @@ export function useEvent() {
         console.error('Supabase error:', error);
         throw error;
       }
-      
+
+      // Broadcast notification to all users
+      const { data: users, error: usersError } = await supabase
+        .from('users')
+        .select('id, username');
+
+      if (usersError) {
+        console.error('Error fetching users:', usersError);
+        throw usersError;
+      }
+
+      if (users && users.length > 0) {
+        const notifications = users.map(user => ({
+          user_id: user.id,
+          type: 'event_created',
+          title: 'New Event Created',
+          content: `@${currentUser.username} just created a new event - ${eventData.title}`,
+          metadata: {
+            event_id: data.id,
+            banner_url: eventData.banner_url,
+          },
+        }));
+
+        const { error: notificationsError } = await supabase
+          .from('notifications')
+          .insert(notifications);
+
+        if (notificationsError) {
+          console.error('Error inserting notifications:', notificationsError);
+          throw notificationsError;
+        }
+      }
+
       await fetchEvents();
       return data;
     } catch (error) {

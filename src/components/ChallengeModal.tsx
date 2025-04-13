@@ -68,7 +68,7 @@ const ChallengeModal: React.FC<ChallengeModalProps> = ({
       const expirationTime = new Date();
       expirationTime.setHours(expirationTime.getHours() + challengeData.expirationHours);
 
-      const { error } = await supabase
+      const { data: challenge, error } = await supabase
         .from('challenges')
         .insert({
           challenger_id: challengerId,
@@ -82,9 +82,34 @@ const ChallengeModal: React.FC<ChallengeModalProps> = ({
           rules: challengeData.rules,
           required_evidence: challengeData.evidence,
           status: status
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Fetch challenger's username
+      const { data: challengerData, error: challengerError } = await supabase
+        .from('users')
+        .select('username')
+        .eq('id', challengerId)
+        .single();
+
+      if (challengerError) {
+        console.error('Error fetching challenger username:', challengerError);
+        throw challengerError;
+      }
+
+      // Insert notification
+      const { error: notificationError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: challengedId,
+          type: 'challenge_received',
+          title: 'New Challenge Received',
+          content: `@${challengerData.username} has challenged you to a ${challengeData.gameType} match.`,
+          metadata: { challenge_id: challenge.id, challenger_id: challengerId, game_type: challengeData.gameType, amount: challengeData.amount }
+        });
 
       onSuccess?.();
       toast.showSuccess('Challenge created successfully!'); // Changed from toast.show to toast.showSuccess
