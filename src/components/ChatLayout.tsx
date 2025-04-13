@@ -1,6 +1,5 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
-import ChatList from './ChatList';
 import ChatWindow from './ChatWindow';
 
 const ChatLayout: React.FC = () => {

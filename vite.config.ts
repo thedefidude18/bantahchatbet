@@ -19,6 +19,7 @@ export default defineConfig({
           https://api.paystack.co;
         frame-src 'self' https://tawk.to https://*.tawk.to https://checkout.paystack.com;
         font-src 'self' data: https://*.tawk.to;
+        manifest-src 'self' https://idx-bantahlion-1744467813686.cluster-blu4edcrfnajktuztkjzgyxzek.cloudworkstations.dev;
         media-src 'self' https://*.tawk.to;
         worker-src 'self' blob:;
         child-src blob:;
