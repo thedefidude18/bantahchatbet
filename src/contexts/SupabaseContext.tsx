@@ -23,3 +23,5 @@ export function useSupabase() {
   }
   return context;
 }
+
+export { SupabaseContext };

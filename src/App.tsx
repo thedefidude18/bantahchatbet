@@ -7,6 +7,7 @@ import { SplashScreenProvider } from './contexts/SplashScreenContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { WalletProvider } from './contexts/WalletContext';
 import { SettingsProvider } from './contexts/SettingsContext';
+import { SupabaseProvider } from './contexts/SupabaseContext'; // Import SupabaseProvider
 import DesktopNav from './components/DesktopNav';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import ChatLayout from './components/ChatLayout';
@@ -38,126 +39,128 @@ const App: React.FC = () => {
 
   return (
     <ToastProvider>
-      <AuthProvider>
-        <WalletProvider>
-            <SettingsProvider>
-              <SplashScreenProvider>
-                <div className="min-h-screen bg-gray-50">
-                  {!isAuthPage && <DesktopNav />}
-                  <main className="lg:ml-[200px] flex-1"> {/* Add margin to match nav width */}
-                    <Routes>
-                      {/* Public routes */}
-                      <Route path="/signin" element={<SignIn />} />
-                      <Route path="/help" element={<Help />} />
-                      <Route path="/privacy" element={<Privacy />} />
+      <SupabaseProvider> {/* Add SupabaseProvider here */}
+        <AuthProvider>
+          <WalletProvider>
+              <SettingsProvider>
+                <SplashScreenProvider>
+                  <div className="min-h-screen bg-gray-50">
+                    {!isAuthPage && <DesktopNav />}
+                    <main className="lg:ml-[200px] flex-1"> {/* Add margin to match nav width */}
+                      <Routes>
+                        {/* Public routes */}
+                        <Route path="/signin" element={<SignIn />} />
+                        <Route path="/help" element={<Help />} />
+                        <Route path="/privacy" element={<Privacy />} />
 
-                      {/* Protected routes */}
-                      <Route 
-                        path="/events" 
-                        element={
+                        {/* Protected routes */}
+                        <Route 
+                          path="/events" 
+                          element={
+                            <ProtectedRoute>
+                              <Events />
+                            </ProtectedRoute>
+                          } 
+                        />
+                        <Route 
+                          path="/wallet" 
+                          element={
+                            <ProtectedRoute>
+                              <Wallet />
+                            </ProtectedRoute>
+                          } 
+                        />
+                        <Route path="/games" element={
                           <ProtectedRoute>
-                            <Events />
+                            <Games />
                           </ProtectedRoute>
-                        } 
-                      />
-                      <Route 
-                        path="/wallet" 
-                        element={
+                        } />
+                        <Route path="/myevents" element={
                           <ProtectedRoute>
-                            <Wallet />
+                            <MyEvents />
                           </ProtectedRoute>
-                        } 
-                      />
-                      <Route path="/games" element={
-                        <ProtectedRoute>
-                          <Games />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/myevents" element={
-                        <ProtectedRoute>
-                          <MyEvents />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/challenge/:id" element={
-                        <ProtectedRoute>
-                          <ChallengeDetails />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/create" element={
-                        <ProtectedRoute>
-                          <Create />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/profile" element={
-                        <ProtectedRoute>
-                          <Profile />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/settings/profile" element={
-                        <ProtectedRoute>
-                          <ProfileSettings />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/settings" element={
-                        <ProtectedRoute>
-                          <Settings />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/referral" element={
-                        <ProtectedRoute>
-                          <Referral />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/leaderboard" element={
-                        <ProtectedRoute>
-                          <Leaderboard />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/messages" element={
-                        <ProtectedRoute>
-                          <Messages />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/notifications" element={
-                        <ProtectedRoute>
-                          <Notifications />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/taxi-share" element={
-                        <ProtectedRoute>
-                          <TaxiShare />
-                        </ProtectedRoute>
-                      } />
-                      <Route 
-                        path="/challenge/:id/chat" 
-                        element={
+                        } />
+                        <Route path="/challenge/:id" element={
                           <ProtectedRoute>
-                            <ChallengeChat />
+                            <ChallengeDetails />
                           </ProtectedRoute>
-                        } 
-                      />
-                      <Route 
-                        path="/event/:eventId/chat" 
-                        element={
+                        } />
+                        <Route path="/create" element={
                           <ProtectedRoute>
-                            <EventChatWrapper />
+                            <Create />
                           </ProtectedRoute>
-                        } 
-                      />
-                      <Route path="/chats" element={<ChatLayout />} />
-                      <Route path="/chat/:chatId" element={<ChatLayout />} />
+                        } />
+                        <Route path="/profile" element={
+                          <ProtectedRoute>
+                            <Profile />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/settings/profile" element={
+                          <ProtectedRoute>
+                            <ProfileSettings />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/settings" element={
+                          <ProtectedRoute>
+                            <Settings />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/referral" element={
+                          <ProtectedRoute>
+                            <Referral />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/leaderboard" element={
+                          <ProtectedRoute>
+                            <Leaderboard />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/messages" element={
+                          <ProtectedRoute>
+                            <Messages />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/notifications" element={
+                          <ProtectedRoute>
+                            <Notifications />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/taxi-share" element={
+                          <ProtectedRoute>
+                            <TaxiShare />
+                          </ProtectedRoute>
+                        } />
+                        <Route 
+                          path="/challenge/:id/chat" 
+                          element={
+                            <ProtectedRoute>
+                              <ChallengeChat />
+                            </ProtectedRoute>
+                          } 
+                        />
+                        <Route 
+                          path="/event/:eventId/chat" 
+                          element={
+                            <ProtectedRoute>
+                              <EventChatWrapper />
+                            </ProtectedRoute>
+                          } 
+                        />
+                        <Route path="/chats" element={<ChatLayout />} />
+                        <Route path="/chat/:chatId" element={<ChatLayout />} />
 
-                      {/* Redirects */}
-                      <Route path="/" element={<Navigate to="/events" replace />} />
-                      <Route path="*" element={<Navigate to="/events" replace />} />
-                    </Routes>
-                    <PWAInstallPrompt />
-                  </main>
-                </div>
-              </SplashScreenProvider>
-            </SettingsProvider>
-        </WalletProvider>
-      </AuthProvider>
+                        {/* Redirects */}
+                        <Route path="/" element={<Navigate to="/events" replace />} />
+                        <Route path="*" element={<Navigate to="/events" replace />} />
+                      </Routes>
+                      <PWAInstallPrompt />
+                    </main>
+                  </div>
+                </SplashScreenProvider>
+              </SettingsProvider>
+          </WalletProvider>
+        </AuthProvider>
+      </SupabaseProvider> {/* Close SupabaseProvider */}
     </ToastProvider>
   );
 };

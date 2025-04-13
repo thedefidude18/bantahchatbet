@@ -1,125 +1,338 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
+import { useParams, useNavigate } from 'react-router-dom'; // Import useParams and useNavigate
+import { SupabaseContext } from '../contexts/SupabaseContext';
 import defaultAvatar from '../../public/avatar.svg';
-import { Camera, Paperclip, Image } from 'phosphor-react';
-import { Smile } from 'lucide-react';
+import ProfileCard from '../components/ProfileCard'; // Import ProfileCard
+import { Smile, ArrowLeft } from 'lucide-react'; // Import Smile and ArrowLeft from lucide-react
+import { Camera, Paperclip, Image, PaperPlaneRight } from 'phosphor-react'; // Import icons from phosphor-react
 
 const Messages: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [userProfiles, setUserProfiles] = useState<{ [userId: string]: any }>({});
   const [newMessage, setNewMessage] = useState('');
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [typing, setTyping] = useState(''); // State for tracking typing text
+  const { supabase } = useContext(SupabaseContext);
+  const { chatId } = useParams<{ chatId: string }>(); // Get chatId from route params
+  const navigate = useNavigate(); // Initialize useNavigate
 
-  interface MessageType {
+  // Use chatId as the recipientId
+  const recipientId = chatId; 
+
+  // **** Ensure recipientId is a valid UUID ****
+
+  interface Message {
     id: string;
-    sender: 'self' | 'other';
     content: string;
-    timestamp: string;
-    reactions?: { like: number; heart: number };
-    replies?: number;
-    senderName: string;
-    avatarUrl: string;
-  }
-
-  interface Chat {
-    id: number;
-    username: string;
-    message: string;
-    timestamp: string;
-    avatarUrl: string;
-    hasNewMessages: boolean;
-    newMessagesCount: number;
+    sender_id: string;
+    receiver_id: string; // Added for filtering in subscription
+    created_at: string;
+    received_at?: string;
+    reactions: {
+      [emoji: string]: string[]; // key is emoji, value is array of user ids
+    };
   }
 
   useEffect(() => {
-    const initialMessages: Message[] = [
-      { id: '1', sender: 'other', senderName: 'Habibi_247', avatarUrl: defaultAvatar, content: 'Hello, who won?', timestamp: 'Friday 5:50pm', reactions: { like: 0, heart: 0 }, replies: 0 },
-      { id: '2', sender: 'other', senderName: 'king-bettohk2', avatarUrl: defaultAvatar, content: 'we lost!!!!!!!! Bro!', timestamp: 'Friday 5:50pm', reactions: { like: 0, heart: 0 }, replies: 0 },
-      { id: '3', sender: 'other', senderName: 'bingogees', avatarUrl: defaultAvatar, content: 'Hello, who won?', timestamp: 'Friday 5:50pm', reactions: { like: 12, heart: 0 }, replies: 0 },
-      { id: '4', sender: 'other', senderName: 'bingogees', avatarUrl: defaultAvatar, content: 'Hello, who won?', timestamp: 'Friday 5:50pm', reactions: { like: 12, heart: 0 }, replies: 0 },
-    ];
-    setMessages(initialMessages);
-  }, []);
-  useEffect(() => {
-    // Scroll to bottom when messages change
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (!supabase) return;
 
-  const sendMessage = (text: string) => {
-    if (text.trim() !== '') {
-      const now = new Date();
-      const timestamp = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-      const newMessageObj: Message = {
-        id: Date.now().toString(),
-        sender: 'self',
-        senderName: 'You',
-        avatarUrl: defaultAvatar,
-        content: text,
-        text: text,
-        timestamp,
-      };
-      setMessages([...messages, newMessageObj]);
-      setNewMessage(''); // Clear the input field
+    const fetchCurrentUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id) {
+        setCurrentUserId(session.user.id);
+      } else {
+        console.error('User not logged in');
+        // Handle case where user is not logged in
+      }
+    };
+
+    fetchCurrentUser();
+  }, [supabase]);
+
+  useEffect(() => {
+    // Ensure recipientId is a valid UUID before proceeding (basic check)
+    if (!supabase || !currentUserId || !recipientId /* Removed placeholder check */) {
+        // Add a more specific check for UUID validity if needed
+        if (!recipientId) {
+           console.warn('Recipient ID is missing or invalid from route params.');
+        } else {
+           console.warn('Missing supabase or currentUserId');
+        }
+        return; 
     }
-  };
 
-  const handleSendMessage = () => {
-    sendMessage(newMessage);
+    const getUserProfile = async (userId: string) => {
+      if (userProfiles[userId]) {
+        return userProfiles[userId];
+      }
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, name, username, avatar_url')
+        .eq('id', userId)
+        .single();
+      if (error) {
+        console.error('Error fetching user profile for ID:', userId, error);
+        return null;
+      }
+      setUserProfiles((prev) => ({ ...prev, [userId]: data }));
+      return data;
+    };
+
+    // Fetch recipient profile specifically for the header
+    getUserProfile(recipientId);
+
+    const fetchMessages = async () => {
+      console.log(`Fetching messages between ${currentUserId} and ${recipientId}`); // Debug log
+      const { data, error } = await supabase
+        .from('private_messages')
+        .select('id, content, sender_id, created_at, reactions, receiver_id') // Include receiver_id
+        .order('created_at', { ascending: true })
+        .or(
+          `and(sender_id.eq.${currentUserId},receiver_id.eq.${recipientId}),and(sender_id.eq.${recipientId},receiver_id.eq.${currentUserId})`
+        );
+
+      if (error) {
+        console.error('Error fetching private messages:', error); // Log the specific error
+      } else {
+        setMessages(data || []);
+        data?.forEach(async (message) => {
+          if (!userProfiles[message.sender_id]) {
+            await getUserProfile(message.sender_id);
+          }
+        });
+      }
+    };
+
+    fetchMessages();
+
+    // Corrected Subscription using .channel()
+    const messageSubscription = supabase
+      .channel(`private_messages:${currentUserId}:${recipientId}`) // Unique channel name
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'private_messages',
+        },
+        (payload) => {
+          const newMessageData = payload.new as Message;
+          if (
+            newMessageData &&
+            ((newMessageData.sender_id === currentUserId && newMessageData.receiver_id === recipientId) ||
+             (newMessageData.sender_id === recipientId && newMessageData.receiver_id === currentUserId))
+          ) {
+            console.log('New message received via subscription:', newMessageData);
+            if (!userProfiles[newMessageData.sender_id]) {
+              getUserProfile(newMessageData.sender_id);
+            }
+            setMessages((oldMessages) => [...oldMessages, newMessageData]);
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'private_messages',
+        },
+        (payload) => {
+            const updatedMessage = payload.new as Message;
+            if (
+                updatedMessage &&
+                ((updatedMessage.sender_id === currentUserId && updatedMessage.receiver_id === recipientId) ||
+                 (updatedMessage.sender_id === recipientId && updatedMessage.receiver_id === currentUserId))
+              ) {
+                console.log('Message updated via subscription:', updatedMessage);
+                setMessages((oldMessages) =>
+                    oldMessages.map((msg) => (msg.id === updatedMessage.id ? updatedMessage : msg))
+                );
+            }
+        }
+      )
+      .subscribe((status, err) => {
+        if (err) {
+          console.error('Subscription error:', err);
+        }
+        console.log('Subscription status:', status);
+      });
+
+    return () => {
+      if (messageSubscription) {
+        supabase.removeChannel(messageSubscription);
+      }
+    };
+  }, [supabase, recipientId, currentUserId, userProfiles]); // Note: userProfiles dependency might cause re-runs if not memoized
+
+  const sendMessage = async (text: string) => {
+    console.log('sendMessage called with:', { 
+      hasSupabase: !!supabase, 
+      trimmedText: text.trim(), 
+      currentUserId, 
+      recipientId 
+    }); // <-- Added this log
+
+    // Ensure recipientId is valid before sending
+    if (!supabase || text.trim() === '' || !currentUserId || !recipientId) {
+        console.error('Cannot send message: Invalid parameters');
+        return;
+    }
+
+    const { error } = await supabase.rpc('send_private_message', {
+      p_content: text,
+      p_receiver_id: recipientId,
+      p_sender_id: currentUserId,
+    });
+
+    if (error) {
+      console.error('Error sending message:', error);
+    } else {
+      setNewMessage(''); // Clear input on success
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
-      handleSendMessage();
+      sendMessage(newMessage);
     }
   };
 
-  interface Message {
-    id: string;
-    sender: 'self' | 'other';
-    senderName: string;
-    avatarUrl: string;
-    content: string;
-    timestamp: string;
-    reactions?: { like: number; heart: number };
-    replies?: number;
-  }
+  // --- MessageItem Component --- 
   const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
-    const isOther = message.sender === 'other';
-    return (
-      <div className={`flex ${isOther ? 'justify-start' : 'justify-end'} items-start my-2`}>
-        {isOther && (
-          <img src={message.avatarUrl} alt={message.senderName} className="w-8 h-8 rounded-full mr-2" />
-        )}
-        <div className="flex flex-col">
-          {isOther && <span className="text-xs font-bold">{message.senderName}</span>}
-          <div className={`py-2 px-3 rounded-lg ${isOther ? 'bg-gray-100 text-gray-800 rounded-tl-none' : 'bg-blue-500 text-white rounded-tr-none'}`}>
-            <p className="text-sm">{message.content}</p>
-          </div>
-          <div className="flex items-center mt-1">
-            {message.reactions && message.reactions.like > 0 && (
-              <span className="text-xs text-gray-500 mr-2">
-                👍 {message.reactions.like}
+    const [showProfileCard, setShowProfileCard] = useState(false);
+    const isSelf = message.sender_id === currentUserId;
+    const senderProfile = userProfiles[message.sender_id];
+    const [showReactionPicker, setShowReactionPicker] = useState(false)
+
+    const handleReactionClick = async (emoji: string) => {
+      if (!supabase || !currentUserId) return;
+
+      const existingReactions = message.reactions || {};
+      const usersWhoReacted = existingReactions[emoji] || [];
+      const userHasReacted = usersWhoReacted.includes(currentUserId);
+      let updatedReactions = { ...existingReactions };
+
+      if (userHasReacted) {
+        updatedReactions[emoji] = usersWhoReacted.filter((userId) => userId !== currentUserId);
+        if (updatedReactions[emoji].length === 0) {
+          delete updatedReactions[emoji];
+        }
+      } else {
+        updatedReactions[emoji] = [...usersWhoReacted, currentUserId];
+      }
+
+      const { data, error } = await supabase
+        .from('private_messages')
+        .update({ reactions: updatedReactions })
+        .eq('id', message.id)
+        .select('id, content, sender_id, created_at, reactions, receiver_id');
+
+      if (error) {
+        console.error('Error adding/removing reaction:', error);
+      }
+      setShowReactionPicker(false);
+    };
+
+    const ReactionsDisplay: React.FC<{ reactions: { [emoji: string]: string[] } | null | undefined }> = ({ reactions }) => {
+      if (!reactions || Object.keys(reactions).length === 0) {
+        return null;
+      }
+
+      return (
+        <div className="flex space-x-1 mt-1">
+          {Object.entries(reactions).map(([emoji, users]) => (
+            users.length > 0 && (
+              <span
+                key={emoji}
+                className="cursor-pointer px-1.5 py-0.5 rounded-full bg-gray-200 text-gray-700 text-xs flex items-center"
+                title={`Reacted by: ${users.length} user(s)`}
+                onClick={() => handleReactionClick(emoji)}
+              >
+                {emoji} {users.length}
               </span>
-            )}
-            {message.reactions && message.reactions.heart > 0 && (
-              <span className="text-xs text-gray-500 mr-2">
-                ❤️ {message.reactions.heart}
-              </span>
-            )}
-            <span className="text-xs text-gray-500">{message.timestamp}</span>
-          </div>
+            )
+          ))}
         </div>
-        {!isOther && (
-          <img src={message.avatarUrl} alt="You" className="w-8 h-8 rounded-full ml-2" />
-        )}
-      </div>
-    );
+      );
+    };
+
+    return (
+        <div className={`flex ${isSelf ? 'justify-end' : 'justify-start'} items-start my-2 group relative`}>
+          {!isSelf && (
+            <div
+              className="relative mr-2 flex-shrink-0"
+              onMouseEnter={() => setShowProfileCard(true)}
+              onMouseLeave={() => setShowProfileCard(false)}
+            >
+              <img
+                src={senderProfile?.avatar_url || defaultAvatar}
+                alt="Sender Avatar"
+                className="w-8 h-8 rounded-full cursor-pointer"
+              />
+              {showProfileCard && senderProfile && (
+                <div className="absolute left-10 -top-2 z-10 w-max">
+                  <ProfileCard user={senderProfile} />
+                </div>
+              )}
+            </div>
+          )}
+  
+          <div className={`flex flex-col max-w-[75%] ${isSelf ? 'items-end' : 'items-start'}`}>
+            <div
+              className={`relative py-2 px-3 rounded-lg shadow-sm ${isSelf ? 'bg-blue-500 text-white rounded-tr-none' : 'bg-white text-gray-800 rounded-tl-none'}`}
+              onMouseEnter={() => setShowReactionPicker(true)}
+              onMouseLeave={() => setShowReactionPicker(false)}
+            >
+              <p className="text-sm break-words">{message.content}</p>
+              {showReactionPicker && (
+                  <div className={`absolute ${isSelf ? 'left-0 -top-8' : 'right-0 -top-8'} z-20 bg-white shadow-md rounded-full p-1 flex space-x-1`}>
+                      {['👍', '❤️', '😂', '😮', '😢', '😡'].map((emoji) => (
+                          <button
+                              key={emoji}
+                              className="p-1 hover:bg-gray-200 rounded-full text-lg transition-transform duration-100 ease-in-out transform hover:scale-125"
+                              onClick={() => handleReactionClick(emoji)}
+                          >
+                              {emoji}
+                          </button>
+                      ))}
+                  </div>
+              )}
+              <ReactionsDisplay reactions={message.reactions} />
+            </div>
+            <span className="text-xs text-gray-500 mt-1">{new Date(message.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>
+          </div>
+  
+          {isSelf && (
+            <div className="relative ml-2 flex-shrink-0">
+               {/* Optional: Add avatar for self messages */}
+            </div>
+          )}
+        </div>
+      );
   };
 
+  // --- MessageInput Component with Buttons --- 
   const MessageInput: React.FC = () => (
-    <div className="bg-white py-2 px-4 flex items-center border-t border-gray-200">
-      <button className="text-gray-400 mr-2">
-        <Smile size={20} />
+    <div className="bg-white py-2 px-4 flex items-center border-t border-gray-200 space-x-2">
+      {/* Emoji Button */}
+      <button className="text-gray-400 hover:text-gray-600 p-1">
+        <Smile size={24} />
       </button>
+      {/* Attach File Button */}
+      <button className="text-gray-400 hover:text-gray-600 p-1">
+        <Paperclip size={24} />
+      </button>
+      {/* Image Button */}
+      <button className="text-gray-400 hover:text-gray-600 p-1">
+        <Image size={24} />
+      </button>
+      {/* Camera Button */}
+      <button className="text-gray-400 hover:text-gray-600 p-1">
+        <Camera size={24} />
+      </button>
+      {/* Text Input */}
       <input
         type="text"
         className="flex-1 py-2 px-3 rounded-full bg-gray-50 focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-300"
@@ -128,45 +341,70 @@ const Messages: React.FC = () => {
         onChange={(e) => setNewMessage(e.target.value)}
         onKeyDown={handleKeyDown}
       />
-      <button className="text-gray-400 ml-2">
-        <Paperclip size={20} />
-      </button>
-      <button className="text-gray-400 ml-2">
-        <Image size={20} />
-      </button>
-      <button className="text-gray-400 ml-2">
-        <Camera size={20} />
-      </button>
+      {/* Send Button */}
       <button
-        onClick={handleSendMessage}
-        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full ml-2 focus:outline-none focus:shadow-outline"
+        onClick={() => sendMessage(newMessage)} // Call sendMessage onClick
+        disabled={!newMessage.trim()} // Disable if input is empty
+        className="p-2 bg-blue-500 text-white rounded-full disabled:opacity-50 hover:bg-blue-600"
       >
-        Send
+        <PaperPlaneRight size={20} weight="fill" />
       </button>
     </div>
   );
 
-  const placeholderMessages: Message[] = [
-    { id: '1', sender: 'other', senderName: 'Habibi_247', avatarUrl: defaultAvatar, content: 'Hello, who won?', timestamp: 'Friday 5:50pm', reactions: { like: 0, heart: 0 }, replies: 0 },
-    { id: '2', sender: 'other', senderName: 'king-bettohk2', avatarUrl: defaultAvatar, content: 'we lost!!!!!!!! Bro!', timestamp: 'Friday 5:50pm', reactions: { like: 0, heart: 0 }, replies: 0 },
-    { id: '3', sender: 'other', senderName: 'bingogees', avatarUrl: defaultAvatar, content: 'Hello, who won?', timestamp: 'Friday 5:50pm', reactions: { like: 12, heart: 0 }, replies: 0 },
-    { id: '4', sender: 'other', senderName: 'bingogees', avatarUrl: defaultAvatar, content: 'Hello, who won?', timestamp: 'Friday 5:50pm', reactions: { like: 12, heart: 0 }, replies: 0 },
-  ];
+  const recipientProfile = recipientId ? userProfiles[recipientId] : null;
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
-      {/* Header (Placeholder) */}
-      <header className="bg-purple-600 text-white py-3 px-4">
-        <h1 className="text-lg font-semibold text-center">@bingogoes</h1>
+      {/* Updated Header Section */}
+      <header className="bg-white border-b border-gray-200 p-3 flex items-center justify-between sticky top-0 z-10">
+        <div className="flex items-center space-x-2">
+          {/* Back Button */}
+          <button onClick={() => navigate(-1)} className="p-1 text-gray-600 hover:text-gray-800">
+            <ArrowLeft size={22} />
+          </button>
+          {/* Recipient Info */}
+          {recipientProfile ? (
+            <div className="flex items-center space-x-3 cursor-pointer" /* onClick could navigate to profile */ >
+              <img 
+                src={recipientProfile.avatar_url || defaultAvatar} 
+                alt={recipientProfile.name || 'Recipient Avatar'} 
+                className="w-9 h-9 rounded-full"
+              />
+              <div>
+                <h2 className="font-semibold text-gray-800 text-sm leading-tight">{recipientProfile.name || recipientProfile.username || 'Chat'}</h2>
+                {/* Placeholder for Online Status */}
+                <p className="text-xs text-gray-500 leading-tight">Online</p> 
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center space-x-3">
+                 <div className="w-9 h-9 rounded-full bg-gray-200 animate-pulse"></div>
+                 <div>
+                     <div className="h-4 bg-gray-200 rounded w-24 mb-1 animate-pulse"></div>
+                     <div className="h-3 bg-gray-200 rounded w-16 animate-pulse"></div>
+                 </div>
+            </div>
+          )}
+        </div>
+        {/* Right-side Action Icons (Placeholder) */}
+        <div className="flex items-center space-x-2">
+          {/* Example: <button className="p-1 text-gray-600 hover:text-gray-800"><Phone size={22} /></button> */}
+          {/* Example: <button className="p-1 text-gray-600 hover:text-gray-800"><VideoCamera size={22} /></button> */}
+        </div>
       </header>
+
+      {/* Message List */}
       <div className="flex-1 overflow-y-auto p-4">
-        {placeholderMessages.map(message => (
+        {messages.map((message) => (
           <MessageItem key={message.id} message={message} />
         ))}
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Message Input Area */}
       <MessageInput />
     </div>
   );
 };
-export default Messages
+export default Messages;

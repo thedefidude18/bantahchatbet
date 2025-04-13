@@ -23,11 +23,7 @@ export interface Message {
 export interface MessageReaction {
   id: string;
   emoji: string;
+  message_id: string;
   user_id: string;
-}
-
-export interface TypingIndicator {
-  user_id: string;
-  event_id: string;
-  last_typed: string;
+  created_at: string;
 }
