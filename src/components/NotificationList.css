@@ -1,0 +1,115 @@
+/* Styles from src/components/NotificationList.css */
+.notification-page {
+    /* Add styles for the overall page container, e.g., width, margin, padding */
+    width: 80%;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #121212; /* Dark background */
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  }
+  
+  .notification-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  
+  .notification-header h2 {
+    margin: 0;
+    /* Style the heading, e.g., font-size, font-weight */
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+  
+  .mark-all-read-button {
+    /* Style the "Mark all as read" button, e.g., background-color, text-color, padding */
+    background-color: #555; /* Example background color */
+    color: white;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  .notification-tabs {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #333; /* Add a subtle underline */
+  }
+  
+  .tab {
+    padding: 10px 20px;
+    border: none;
+    background-color: transparent;
+    cursor: pointer;
+    color: #ccc; /* Adjust text color */
+  }
+  
+  .tab.active {
+    border-bottom: 2px solid #007bff;
+    color: white;
+  }
+  
+  .notifications-container {
+    /* Add styles for the container of the notification list */
+  }
+  
+  .notification-item {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #333; /* Adjust color as needed */
+  }
+  
+  .notification-avatar {
+    margin-right: 10px;
+  }
+  
+  .notification-avatar img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+  }
+  
+  .notification-content {
+    flex: 1;
+  }
+  
+  .notification-content p {
+    margin: 0;
+  }
+  
+  .notification-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+  }
+  
+  .button {
+    padding: 5px 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  .deny-button {
+    background-color: #f44336;
+    color: white;
+    margin-right: 5px;
+  }
+  
+  .approve-button {
+    background-color: #4caf50;
+    color: white;
+  }
+  
+  .notification-timestamp {
+    font-size: 0.8em;
+    color: #999;
+    margin-top: 5px;
+  }
+  

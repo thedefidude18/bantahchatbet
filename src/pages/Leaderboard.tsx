@@ -88,12 +88,12 @@ const Leaderboard: React.FC = () => {
 
                   {/* Stats */}
                   <div className="flex items-center gap-6">
-                    <div className="text-center">
-                      <p className="text-sm text-gray-500">Groups</p>
+                    <div className="text-center ">
+                      <p className="text-xs text-gray-500">Groups</p>
                       <p className="font-bold text-gray-900">{user.groups_joined}</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-sm text-gray-500">Wins</p>
+                      <p className="text-xs text-gray-500">Wins</p>
                       <p className="font-bold text-gray-900">{user.events_won}</p>
                     </div>
                     <div className="text-right min-w-[100px]">
