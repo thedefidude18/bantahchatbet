@@ -11,6 +11,7 @@ import { SupabaseProvider } from './contexts/SupabaseContext'; // Import Supabas
 import DesktopNav from './components/DesktopNav';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import ChatLayout from './components/ChatLayout';
+import ChatWindow from './components/ChatWindow';
 
 // Import pages
 import Events from './pages/Events';
@@ -130,6 +131,11 @@ const App: React.FC = () => {
                             <TaxiShare />
                           </ProtectedRoute>
                         } />
+                        
+                       <Route path="/messages/:userId" 
+                       element={<ChatWindow />
+                       } />
+
                         <Route 
                           path="/challenge/:id/chat" 
                           element={

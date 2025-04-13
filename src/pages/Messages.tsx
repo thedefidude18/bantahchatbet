@@ -26,44 +26,47 @@ const Messages: React.FC = () => {
    try {
     if (!currentUser) return;
 
-    // Fetch users with whom the current user has chats with
-    const { data: chatsData, error: chatsError } = await supabase
-     .from('chats')
-     .select('id, participants')
-     .contains('participants', [{ user_id: currentUser.id }]);
+    // Find the users with whom the current user has chats with
+    const { data, error } = await supabase
+     .from('chat_participants')
+     .select('chat_id, user_id')
+     .eq('user_id', currentUser.id);
 
-    if (chatsError) {
-     console.error('Error fetching chats:', chatsError);
+    if (error) {
+     console.error('Error fetching top users:', error);
      return;
     }
 
-    // Extract unique user ids from the chats, excluding the current user
-    const uniqueUserIds = new Set<string>();
-    chatsData.forEach(chat => {
-     chat.participants.forEach(participant => {
-      if (participant.user_id !== currentUser.id) {
-       uniqueUserIds.add(participant.user_id);
-      }
-     });
-    });
+    // Extract the chat IDs
+    const chatIds = data.map((item) => item.chat_id);
 
-    // Fetch user details for the extracted user ids
-    const userIdsArray = Array.from(uniqueUserIds);
-    if (userIdsArray.length > 0) {
-     const { data: usersData, error: usersError } = await supabase
-      .from('users_view')
-      .select('id, name, avatar_url')
-      .in('id', userIdsArray)
-      .limit(5);
+    // Fetch other user's ids from those chats
+    const { data: otherParticipants, error: otherError } = await supabase
+     .from('chat_participants')
+     .select('user_id')
+     .in('chat_id', chatIds)
+     .neq('user_id', currentUser.id)
+     .limit(5);
 
-     if (usersError) {
-      console.error('Error fetching users:', usersError);
-     } else {
-      setTopUsers(usersData || []);
-     }
-    } else {
-     setTopUsers([]);
+    if (otherError) {
+     console.error('Error fetching top users:', otherError);
+     return;
     }
+
+    const otherUserIds = otherParticipants.map((item) => item.user_id);
+
+    // Fetch user details from the users_view table
+    const { data: usersData, error: usersError } = await supabase
+     .from('users_view')
+     .select('id, name, avatar_url')
+     .in('id', otherUserIds);
+
+    if (usersError) {
+     console.error('Error fetching user details:', usersError);
+     return;
+    }
+
+    setTopUsers(usersData || []);
    } catch (error) {
     console.error('Error fetching top users:', error);
    }
@@ -96,7 +99,7 @@ const Messages: React.FC = () => {
   };
 
   fetchUsers();
- }, [searchQuery]);
+ }, [searchQuery, isSearchModalOpen]);
 
  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
   setSearchQuery(e.target.value);
@@ -112,6 +115,10 @@ const Messages: React.FC = () => {
   setUsers([]);//Clear user data
  };
 
+ const handleUserClick = (userId: string) => {
+  navigate(`/messages/${userId}`);
+ };
+
  return (
   <div className="h-screen flex flex-col">
    <Header title="Messages" showBackButton={true} />
@@ -123,7 +130,8 @@ const Messages: React.FC = () => {
      <h2 className="text-lg font-semibold mb-2">Top Users</h2>
      <div className="flex overflow-x-auto">
       {topUsers.map(user => (
-       <div key={user.id} className="mr-4 flex flex-col items-center">
+       <div key={user.id} className="mr-4 flex flex-col items-center cursor-pointer"
+        onClick={() => handleUserClick(user.id)}>
         <div className="relative">
          <img
           src={user.avatar_url || '/avatar.svg'}
@@ -147,12 +155,13 @@ const Messages: React.FC = () => {
     </button>
 
     {/* Display Searched users*/}
-    {users.length > 0 ? (
+    {users.length > 0 && (
      <div className="flex flex-col">
       {users.map(user => {
        const avatarUrl = user.avatar_url || currentUser?.avatar_url || null;
        return (
-        <div key={user.id} className="mb-2 p-4 border rounded shadow-md">
+        <div key={user.id} className="mb-2 p-4 border rounded shadow-md cursor-pointer"
+         onClick={() => handleUserClick(user.id)}>
          <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">{user.name}</h2>
           <img
@@ -165,9 +174,8 @@ const Messages: React.FC = () => {
        );
       })}
      </div>
-    ) : (
-     <p>No messages found, start a new message here</p>
     )}
+    {users.length === 0 &&  (<p>No messages found, start a new message here</p>)}
    </div>
    <MobileFooterNav />
   </div>
