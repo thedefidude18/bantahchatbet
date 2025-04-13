@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { 
-  Bell, 
+import {
+  Bell,
   MessageSquare,
   Wallet,
   LogIn,
-  Search
+  Search,
+  ArrowLeft
 } from 'lucide-react';
 import Logo from './Logo';
 import { useAuth } from '../contexts/AuthContext';
@@ -19,14 +20,16 @@ interface HeaderProps {
   title?: string;
   showMenu?: boolean;
   onMenuClick?: () => void;
-  showSearch?: boolean; // New prop
+  showSearch?: boolean;
+  showBackButton?: boolean; // New prop to show back button
 }
 
-const Header: React.FC<HeaderProps> = ({ 
-  title, 
-  showMenu = true, 
+const Header: React.FC<HeaderProps> = ({
+  title,
+  showMenu = true,
   onMenuClick,
-  showSearch = false
+  showSearch = false,
+  showBackButton = false // Default value for showBackButton
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -63,17 +66,23 @@ const formatNumber = (num, currency) => {
         <div className="flex justify-between items-center h-16">
           {/* Left Section */}
           <div className="flex items-center gap-4">
-            {/* Only show logo on mobile */}
+            {/* Conditionally show back button or logo on mobile */}
             {isMobile && (
-              <div 
-                className="flex items-center gap-2 cursor-pointer" 
-                onClick={() => handleNavigate('/')}
-              >
-                <Logo className="h-8 w-8" />
-                {title && !shouldHideTitle() && (
-                  <span className="font-bold text-xl">{title}</span>
-                )}
-              </div>
+              showBackButton ? (
+                <button onClick={() => navigate(-1)} className="text-white">
+                  <ArrowLeft className="h-6 w-6" />
+                </button>
+              ) : (
+                <div
+                  className="flex items-center gap-2 cursor-pointer"
+                  onClick={() => handleNavigate('/')}
+                >
+                  <Logo className="h-8 w-8" />
+                  {title && !shouldHideTitle() && (
+                    <span className="font-bold text-xl">{title}</span>
+                  )}
+                </div>
+              )
             )}
           </div>
 
@@ -103,10 +112,10 @@ const formatNumber = (num, currency) => {
                   className="p-2 rounded-full hover:bg-gray-100 transition-colors relative"
                   aria-label="Leaderboard"
                 >
-                  <img 
-                    src="/messages-brutal.svg" 
+                  <img
+                    src="/messages-brutal.svg"
                     alt="messages-brutal"
-                    className="h-7 w-7 opacity-80 hover:opacity-100 transition-opacity" 
+                    className="h-7 w-7 opacity-80 hover:opacity-100 transition-opacity"
                   />
                 </button>
 
@@ -116,10 +125,10 @@ const formatNumber = (num, currency) => {
                   className="p-2 rounded-full hover:bg-gray-100 transition-colors relative"
                   aria-label="Leaderboard"
                 >
-                  <img 
-                    src="/leaderboard_icon.png" 
+                  <img
+                    src="/leaderboard_icon.png"
                     alt="Leaderboard"
-                    className="h-5 w-5 opacity-80 hover:opacity-100 transition-opacity" 
+                    className="h-5 w-5 opacity-80 hover:opacity-100 transition-opacity"
                   />
                 </button>
 
@@ -129,27 +138,17 @@ const formatNumber = (num, currency) => {
                   className="p-2 rounded-full hover:bg-gray-100 transition-colors relative"
                   aria-label="Notifications"
                 >
-                  <img 
-                    src="/notify22.svg" 
+                  <img
+                    src="/notify22.svg"
                     alt="Notifications"
-                    className="h-7 w-7" 
+                    className="h-7 w-7"
                   />
                   {unreadCount > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center">{unreadCount}</span>}
                 </button>
 
                 {/* Wallet */}
-                <button 
-  onClick={() => handleNavigate('/wallet')} 
-  className="flex items-center gap-1 px-3 py-1.5 bg-[#CCFF00] text-black font-semibold rounded-full hover:bg-[#CCFF00]/80 transition-colors" 
-  aria-label="Wallet" 
-> 
-  <span className="text-sm font-bold"> 
-    {formatNumber(balance, '₦')} 
-    <span className="text-[10px] opacity-60 ml-0.5"> 
-      ({formatNumber(parseFloat(usdEquivalent), '$')}) 
-    </span> 
-  </span> 
-</button>
+                <button
+  onClick={() => handleNavigate('/wallet')}  className="flex items-center gap-1 px-3 py-1.5 bg-[#CCFF00] text-black font-semibold rounded-full hover:bg-[#CCFF00]/80 transition-colors"  aria-label="Wallet" >  <span className="text-sm font-bold">    {formatNumber(balance, '₦')}    <span className="text-[10px] opacity-60 ml-0.5">      ({formatNumber(parseFloat(usdEquivalent), '$')})    </span>  </span></button>
               </>
             ) : (
               <button

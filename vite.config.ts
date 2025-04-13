@@ -26,5 +26,10 @@ export default defineConfig({
         object-src 'none';
       `.replace(/\s+/g, ' ').trim()
     }
-  }
+  },
+  resolve: {
+    alias: {
+      '@': '/src',
+    },
+  },
 });
