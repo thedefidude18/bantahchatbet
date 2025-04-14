@@ -138,7 +138,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, onChatClick }) => {
             <div className="flex items-center gap-2 mt-1">
               <div className="bg-white rounded-full px-2 py-1">
                 <span className="text-black font-bold text-sm">
-                  ₦{event.pool?.total_amount?.toLocaleString() || '2,500.00'}
+                  ₦{event.pool?.total_amount?.toLocaleString() || '0'}
                 </span>
               </div>
               <div className="flex items-center">
@@ -150,7 +150,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, onChatClick }) => {
                   />
                 </div>
                 <div className="bg-white rounded-full ml-[-0.75rem] px-2 py-1 text-black font-bold text-xs">
-                  +{event.participants?.length || 65}
+                  +{(Array.isArray(event.participants) ? event.participants.length : event.current_participants) || 0}
                 </div>
               </div>
             </div>
