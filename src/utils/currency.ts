@@ -17,3 +17,22 @@ export const formatUSD = (amount: number): string => {
 export const convertNGNtoUSD = (amountNGN: number): number => {
   return amountNGN / NGN_TO_USD_RATE;
 };
+
+export const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency: 'NGN',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(amount);
+};
+
+export const formatCurrencyCompact = (amount: number): string => {
+  return new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency: 'NGN',
+    notation: 'compact',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 1
+  }).format(amount);
+};

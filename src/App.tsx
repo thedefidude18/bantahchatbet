@@ -1,58 +1,111 @@
 import React from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useLocation, Routes, Route } from 'react-router-dom';
+import AdminRoute from './components/AdminRoute';
 import ProtectedRoute from './components/ProtectedRoute';
-import { ToastContainer } from 'react-toastify';
-import { AuthProvider } from './contexts/AuthContext';
-import { SplashScreenProvider } from './contexts/SplashScreenContext';
+import DesktopNav from './components/DesktopNav';
 import { ToastProvider } from './contexts/ToastContext';
+import { SupabaseProvider } from './contexts/SupabaseContext';
+import { AuthProvider } from './contexts/AuthContext';
+import { AdminAuthProvider } from './contexts/AdminAuthContext';
 import { WalletProvider } from './contexts/WalletContext';
 import { SettingsProvider } from './contexts/SettingsContext';
-import { SupabaseProvider } from './contexts/SupabaseContext'; // Import SupabaseProvider
-import DesktopNav from './components/DesktopNav';
-import PWAInstallPrompt from './components/PWAInstallPrompt';
-import ChatLayout from './components/ChatLayout';
-import ChatWindow from './components/ChatWindow';
+import { SplashScreenProvider } from './contexts/SplashScreenContext';
 
-// Import pages
-import Events from './pages/Events';
-import Games from './pages/Games';
-import Profile from './pages/Profile';
-import Settings from './pages/Settings';
-import Wallet from './pages/Wallet';
+// Admin Pages
+import AdminLogin from './pages/AdminLogin';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminEvents from './pages/AdminEvents';
+import AdminReports from './pages/AdminReports';
+import AdminWithdrawals from './pages/AdminWithdrawals';
+import AdminAuditLog from './pages/AdminAuditLog';
+import AdminPlatformFees from './pages/AdminPlatformFees';
+
+// User Pages
 import SignIn from './pages/SignIn';
+import Events from './pages/Events';
+import Wallet from './pages/Wallet';
+import Games from './pages/Games';
+import MyEvents from './pages/MyEvents';
+import ChallengeDetails from './pages/ChallengeDetails';
 import Create from './pages/Create';
-import Referral from './pages/Referral';
+import Profile from './pages/Profile';
 import Help from './pages/Help';
 import Privacy from './pages/Privacy';
-import ChallengeDetails from './pages/ChallengeDetails';
-import ProfileSettings from './pages/ProfileSettings';
-import MyEvents from './pages/MyEvents';
-import Leaderboard from './pages/Leaderboard';
-import Messages from './pages/Messages';
-import Notifications from './pages/Notifications';
-import TaxiShare from './pages/TaxiShare';
-import ChallengeChat from './pages/ChallengeChat';
-import EventChatWrapper from './components/EventChatWrapper';
+
+// Components
+import PWAInstallPrompt from './components/PWAInstallPrompt';
 
 const App: React.FC = () => {
   const location = useLocation();
-  const isAuthPage = ['/signin', '/admin/signin'].includes(location.pathname);
+  const isAuthPage = ['/signin', '/admin/login'].includes(location.pathname);
 
   return (
     <ToastProvider>
-      <SupabaseProvider> {/* Add SupabaseProvider here */}
+      <SupabaseProvider>
         <AuthProvider>
-          <WalletProvider>
+          <AdminAuthProvider>
+            <WalletProvider>
               <SettingsProvider>
                 <SplashScreenProvider>
                   <div className="min-h-screen bg-gray-50">
                     {!isAuthPage && <DesktopNav />}
-                    <main className="lg:ml-[200px] flex-1"> {/* Add margin to match nav width */}
+                    <main className="lg:ml-[200px] flex-1">
                       <Routes>
                         {/* Public routes */}
                         <Route path="/signin" element={<SignIn />} />
                         <Route path="/help" element={<Help />} />
                         <Route path="/privacy" element={<Privacy />} />
+                        
+                        {/* Admin routes */}
+                        <Route path="/admin/login" element={<AdminLogin />} />
+                        <Route
+                          path="/admin/dashboard"
+                          element={
+                            <AdminRoute>
+                              <AdminDashboard />
+                            </AdminRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/events"
+                          element={
+                            <AdminRoute>
+                              <AdminEvents />
+                            </AdminRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/reports"
+                          element={
+                            <AdminRoute>
+                              <AdminReports />
+                            </AdminRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/withdrawals"
+                          element={
+                            <AdminRoute>
+                              <AdminWithdrawals />
+                            </AdminRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/platform-fees"
+                          element={
+                            <AdminRoute>
+                              <AdminPlatformFees />
+                            </AdminRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/audit-log"
+                          element={
+                            <AdminRoute>
+                              <AdminAuditLog />
+                            </AdminRoute>
+                          }
+                        />
 
                         {/* Protected routes */}
                         <Route 
@@ -96,77 +149,16 @@ const App: React.FC = () => {
                             <Profile />
                           </ProtectedRoute>
                         } />
-                        <Route path="/settings/profile" element={
-                          <ProtectedRoute>
-                            <ProfileSettings />
-                          </ProtectedRoute>
-                        } />
-                        <Route path="/settings" element={
-                          <ProtectedRoute>
-                            <Settings />
-                          </ProtectedRoute>
-                        } />
-                        <Route path="/referral" element={
-                          <ProtectedRoute>
-                            <Referral />
-                          </ProtectedRoute>
-                        } />
-                        <Route path="/leaderboard" element={
-                          <ProtectedRoute>
-                            <Leaderboard />
-                          </ProtectedRoute>
-                        } />
-                        <Route path="/messages" element={
-                          <ProtectedRoute>
-                            <Messages />
-                          </ProtectedRoute>
-                        } />
-                        <Route path="/notifications" element={
-                          <ProtectedRoute>
-                            <Notifications />
-                          </ProtectedRoute>
-                        } />
-                        <Route path="/taxi-share" element={
-                          <ProtectedRoute>
-                            <TaxiShare />
-                          </ProtectedRoute>
-                        } />
-                        
-                       <Route path="/messages/:userId" 
-                       element={<ChatWindow />
-                       } />
-
-                        <Route 
-                          path="/challenge/:id/chat" 
-                          element={
-                            <ProtectedRoute>
-                              <ChallengeChat />
-                            </ProtectedRoute>
-                          } 
-                        />
-                        <Route 
-                          path="/event/:eventId/chat" 
-                          element={
-                            <ProtectedRoute>
-                              <EventChatWrapper />
-                            </ProtectedRoute>
-                          } 
-                        />
-                        <Route path="/chats" element={<ChatLayout />} />
-                        <Route path="/chat/:chatId" element={<ChatLayout />} />
-
-                        {/* Redirects */}
-                        <Route path="/" element={<Navigate to="/events" replace />} />
-                        <Route path="*" element={<Navigate to="/events" replace />} />
                       </Routes>
                       <PWAInstallPrompt />
                     </main>
                   </div>
                 </SplashScreenProvider>
               </SettingsProvider>
-          </WalletProvider>
+            </WalletProvider>
+          </AdminAuthProvider>
         </AuthProvider>
-      </SupabaseProvider> {/* Close SupabaseProvider */}
+      </SupabaseProvider>
     </ToastProvider>
   );
 };
