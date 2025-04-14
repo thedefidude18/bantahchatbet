@@ -21,6 +21,12 @@ const Messages: React.FC = () => {
  const navigate = useNavigate();
  const { currentUser } = useAuth();
 
+ const [refreshTopUsers, setRefreshTopUsers] = useState(false);
+
+ const handleNewMessageSent = () => {
+  setRefreshTopUsers(prev => !prev);
+ };
+
  useEffect(() => {
   const fetchTopUsers = async () => {
    try {
@@ -73,7 +79,7 @@ const Messages: React.FC = () => {
   };
 
   fetchTopUsers();
- }, [currentUser]);
+ }, [currentUser, refreshTopUsers]);
 
  useEffect(() => {
   const fetchUsers = async () => {
@@ -155,7 +161,7 @@ const Messages: React.FC = () => {
     </button>
 
     {/* Display Searched users*/}
-    {users.length > 0 && (
+    {users.length > 0 ? (
      <div className="flex flex-col">
       {users.map(user => {
        const avatarUrl = user.avatar_url || currentUser?.avatar_url || null;
@@ -174,8 +180,7 @@ const Messages: React.FC = () => {
        );
       })}
      </div>
-    )}
-    {users.length === 0 &&  (<p>No messages found, start a new message here</p>)}
+    ) : ( <p>No messages found, start a new message here</p> )}
    </div>
    <MobileFooterNav />
   </div>

@@ -21,7 +21,7 @@ interface HeaderProps {
   showMenu?: boolean;
   onMenuClick?: () => void;
   showSearch?: boolean;
-  showBackButton?: boolean; // New prop to show back button
+  showBackButton?: boolean;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -29,7 +29,7 @@ const Header: React.FC<HeaderProps> = ({
   showMenu = true,
   onMenuClick,
   showSearch = false,
-  showBackButton = false // Default value for showBackButton
+  showBackButton = false
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -49,16 +49,19 @@ const Header: React.FC<HeaderProps> = ({
 
   const totalMessageCount = unreadMessages + pendingFriendRequests;
 
-const formatNumber = (num, currency) => {
-  if (num >= 1_000_000) return currency + (num / 1_000_000).toFixed(2).replace(/\.00$/, '') + 'M';
-  if (num >= 1_000) return currency + (num / 1_000).toFixed(2).replace(/\.00$/, '') + 'K';
-  return currency + num.toFixed(2).replace(/\.00$/, ''); // Ensures no long decimals
-}
+  const formatNumber = (num, currency) => {
+    if (num >= 1_000_000) return currency + (num / 1_000_000).toFixed(2).replace(/\.00$/, '') + 'M';
+    if (num >= 1_000) return currency + (num / 1_000).toFixed(2).replace(/\.00$/, '') + 'K';
+    return currency + num.toFixed(2).replace(/\.00$/, '');
+  };
 
   const shouldHideTitle = () => {
     const noTitlePaths = ['/events', '/games'];
     return noTitlePaths.includes(location.pathname);
   };
+
+  // Check if dark mode is enabled (assuming a 'dark' class on the root element)
+  const isDarkMode = document.documentElement.classList.contains('dark');
 
   return (
     <header className="sticky top-4 z-50 mx-4">
@@ -68,21 +71,16 @@ const formatNumber = (num, currency) => {
           <div className="flex items-center gap-4">
             {/* Conditionally show back button or logo on mobile */}
             {isMobile && (
-              showBackButton ? (
-                <button onClick={() => navigate(-1)} className="text-white">
-                  <ArrowLeft className="h-6 w-6" />
-                </button>
-              ) : (
-                <div
-                  className="flex items-center gap-2 cursor-pointer"
-                  onClick={() => handleNavigate('/')}
-                >
-                  <Logo className="h-8 w-8" />
-                  {title && !shouldHideTitle() && (
-                    <span className="font-bold text-xl">{title}</span>
-                  )}
-                </div>
-              )
+              <div className="flex items-center">
+                {showBackButton && (
+                  <button onClick={() => navigate(-1)} className="text-white mr-2">
+                    <ArrowLeft className="h-6 w-6" />
+                  </button>
+                )}
+                {title && !shouldHideTitle() && (
+                  <span className="font-bold text-xl text-white">{title}</span>
+                )}
+              </div>
             )}
           </div>
 
@@ -106,17 +104,22 @@ const formatNumber = (num, currency) => {
           <div className="flex items-center gap-4">
             {currentUser ? (
               <>
-                {/* Leaderboard */}
+                {/* Messages */}
                 <button
                   onClick={() => handleNavigate('/messages')}
                   className="p-2 rounded-full hover:bg-gray-100 transition-colors relative"
-                  aria-label="Leaderboard"
+                  aria-label="Messages"
                 >
                   <img
                     src="/messages-brutal.svg"
                     alt="messages-brutal"
                     className="h-7 w-7 opacity-80 hover:opacity-100 transition-opacity"
                   />
+                  {(unreadMessages + pendingFriendRequests) > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center">
+                      {unreadMessages + pendingFriendRequests}
+                    </span>
+                  )}
                 </button>
 
                 {/* Leaderboard */}

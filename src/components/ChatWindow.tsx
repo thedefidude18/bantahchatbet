@@ -1,11 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, ArrowLeft } from 'lucide-react';
-import { useParams } from 'react-router-dom';
+import { Send, ArrowLeft, Phone, Video } from 'lucide-react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import UserAvatar from './UserAvatar';
 import LoadingSpinner from './LoadingSpinner';
-import UserProfileCard from './UserProfileCard';
 import { format, formatDistanceToNow } from 'date-fns';
 
 interface Message {
@@ -36,7 +35,11 @@ interface Chat {
  };
 }
 
-const ChatWindow: React.FC = () => {
+interface ChatWindowProps {
+ onNewMessageSent: () => void;
+}
+
+const ChatWindow: React.FC<ChatWindowProps> = ({ onNewMessageSent }) => {
  const { userId } = useParams<{ userId: string }>();
  const { currentUser } = useAuth();
  const [messages, setMessages] = useState<Message[]>([]);
@@ -45,45 +48,47 @@ const ChatWindow: React.FC = () => {
  const messagesEndRef = useRef<HTMLDivElement>(null);
  const [otherUser, setOtherUser] = useState<any>(null);
  const [showProfile, setShowProfile] = useState(false);
+ const navigate = useNavigate();
+
+ const fetchMessages = async () => {
+  try {
+   if (!userId) {
+    setLoading(false);
+    return;
+   }
+
+   //Fetch Chat Id from chat_participants table.
+   const { data: chatParticipantData, error: chatParticipantError } = await supabase
+    .from('chat_participants')
+    .select('chat_id')
+    .eq('user_id', currentUser.id)
+
+
+
+   if (chatParticipantError) throw chatParticipantError
+
+   const chatId = chatParticipantData[0]?.chat_id;
+
+   const { data: messagesData, error: messagesError } = await supabase
+    .from('messages')
+    .select(`
+     *,
+     sender:users_view(id, name, username, avatar_url)
+    `)
+    .eq('chat_id', chatId)
+    .order('created_at', { ascending: true });
+
+   if (messagesError) throw messagesError;
+   setMessages(messagesData || []);
+  } catch (error) {
+   console.error('Error loading messages:', error);
+  } finally {
+   setLoading(false);
+   scrollToBottom()
+  }
+ };
 
  useEffect(() => {
-  const fetchMessages = async () => {
-   try {
-    if (!userId) {
-     setLoading(false);
-     return;
-    }
-
-    //Fetch Chat Id from chat_participants table.
-    const { data: chatParticipantData, error: chatParticipantError } = await supabase
-     .from('chat_participants')
-     .select('chat_id')
-     .eq('user_id', currentUser.id)
-
-
-
-    if (chatParticipantError) throw chatParticipantError
-
-    const chatId = chatParticipantData[0]?.chat_id;
-
-    const { data: messagesData, error: messagesError } = await supabase
-     .from('messages')
-     .select(`
-      *,
-      sender:users_view(id, name, username, avatar_url)
-     `)
-     .eq('chat_id', chatId)
-     .order('created_at', { ascending: true });
-
-    if (messagesError) throw messagesError;
-    setMessages(messagesData || []);
-   } catch (error) {
-    console.error('Error loading messages:', error);
-   } finally {
-    setLoading(false);
-   }
-  };
-
   const fetchChatAndParticipants = async () => {
    try {
     if (!userId) return;
@@ -112,22 +117,24 @@ const ChatWindow: React.FC = () => {
       id,
       event_id,
       type,
-      event:events(
-       id,
-       creator_id,
-       title,
-       end_time,
-       pool_amount
-      ),
-      participants (user_id)
+      created_at
      `)
      .eq('id', chatId)
      .single();
 
     if (chatError) throw chatError;
 
-    if (chatData && chatData.type === 'private' && chatData.participants) {
-     const otherParticipantId = chatData.participants.find(p => p.user_id !== currentUser?.id)?.user_id;
+     const { data: participantData, error: participantError } = await supabase
+      .from('chat_participants')
+      .select('user_id')
+      .eq('chat_id', chatId)
+      .neq('user_id', currentUser?.id)
+      .single()
+
+    if(participantError) throw participantError;
+
+    const otherParticipantId = participantData?.user_id;
+
      if (otherParticipantId) {
       const { data: userData, error: userError } = await supabase
        .from('users_view')
@@ -138,7 +145,7 @@ const ChatWindow: React.FC = () => {
       if (userError) throw userError;
       setOtherUser(userData);
      }
-    }
+
    } catch (error) {
     console.error('Error fetching chat details or participants:', error);
    } finally {
@@ -193,7 +200,8 @@ const ChatWindow: React.FC = () => {
 
     if (error) throw error;
     setMessage('');
-    fetchMessages(); // Refresh messages after sending
+    fetchMessages();
+    onNewMessageSent();
    } catch (error) {
     console.error('Error sending message:', error);
    }
@@ -207,11 +215,24 @@ const ChatWindow: React.FC = () => {
 
   if (otherUser) {
    return (
-    <div className="flex items-center space-x-2">
-     <UserAvatar src={otherUser.avatar_url || '/default-avatar.png'} alt={otherUser.username} size="md" />
-     <div>
-      <h6 className="font-semibold text-white">{otherUser.name}</h6>
-      <p className="text-xs text-[#D1C4E9]">@{otherUser.username}</p>
+    <div className="flex items-center justify-between p-4">
+     <div className="flex items-center">
+      <button onClick={() => navigate(-1)} className="text-black mr-2">
+       <ArrowLeft className="h-6 w-6" />
+      </button>
+      <UserAvatar src={otherUser.avatar_url || '/default-avatar.png'} alt={otherUser.username} size="md" />
+      <div className="ml-2">
+       <h6 className="font-semibold text-black">{otherUser.name}</h6>
+       <p className="text-xs text-gray-500">Online</p>
+      </div>
+     </div>
+     <div className="flex items-center">
+      <button className="text-gray-600 hover:text-gray-800 mr-2">
+       <Phone className="h-5 w-5" />
+      </button>
+      <button className="text-gray-600 hover:text-gray-800">
+       <Video className="h-5 w-5" />
+      </button>
      </div>
     </div>
    );
@@ -222,11 +243,7 @@ const ChatWindow: React.FC = () => {
  return (
   <div className="flex flex-col h-screen bg-[#F3F3F3]"> {/* Light Gray Background */}
    {/* Top Bar */}
-   <div className="bg-[#673AB7] p-3 flex items-center shadow-sm z-10"> {/* Deep Purple */}
-    {/* Back Button Placeholder - Implement Navigation */}
-    {/* <button onClick={() => {}} className="mr-3 text-white">
-     <ArrowLeft size={24} />
-    </button> */}
+   <div className="bg-[#673AB7] p-3 flex items-center shadow-sm z-10"> {/* White */}
     {chatHeader()}
    </div>
 
@@ -240,22 +257,19 @@ const ChatWindow: React.FC = () => {
     {!loading &&
      messages.map((msg) => {
       const isCurrentUserSender = msg.sender_id === currentUser?.id;
-      const messageBg = isCurrentUserSender ? '#DCF8C6' : 'white'; // Light Green for current user, White for others
-      const textColor = '#212121'; // Dark Gray text
+      const messageAlignment = isCurrentUserSender ? 'self-end items-end' : 'self-start items-start';
+      const messageBg = isCurrentUserSender ? 'bg-[#DCF8C6]' : 'bg-gray-100';
+      const textColor =  '#212121'; // Dark Gray text
+      const borderRadius = isCurrentUserSender ? 'border-bottom-right-radius: 0rem; border-bottom-left-radius: 0.5rem;' : 'border-bottom-right-radius: 0.5rem; border-bottom-left-radius: 0rem;';
 
       return (
        <div
         key={msg.id}
-        className={`flex flex-col w-fit max-w-[80%] ${
-         isCurrentUserSender ? 'self-end items-end' : 'self-start items-start'
-        }`}
+        className={`flex flex-col w-fit max-w-[80%] ${messageAlignment}`}
        >
         <div
          className={`rounded-lg p-2 shadow-sm text-sm ${messageBg}`}
-         style={{
-          borderBottomRightRadius: isCurrentUserSender ? '0rem' : '0.5rem',
-          borderBottomLeftRadius: isCurrentUserSender ? '0.5rem' : '0.5rem',
-         }}
+         style={{ borderRadius }}
         >
          {!isCurrentUserSender && msg.sender?.username && (
           <span className="font-semibold text-[#5E35B1] block mb-0.5">{msg.sender.username}</span>
