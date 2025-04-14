@@ -67,16 +67,17 @@ export interface Withdrawal {
   };
 }
 
-interface EventWithCreator {
+export interface Story {
   id: string;
   title: string;
-  start_time: string;
-  status: string;
-  creator: {
-    id: string;
-    username: string;
-  } | null;
-  event_participants: { count: number }[];
+  content: string;
+  image_url?: string;
+  created_at: string;
+  admin_id: string;
+  admin?: {
+    name: string;
+    avatar_url: string;
+  };
 }
 
 export function useAdmin() {
@@ -164,7 +165,7 @@ export function useAdmin() {
           start_time: event.start_time,
           status: event.status,
           creator: {
-            username: event.creator?.username || 'Unknown'
+            username: event.creator && 'username' in event.creator ? event.creator.username : 'Unknown'
           },
           participants_count: event.event_participants?.[0]?.count || 0
         }))
@@ -473,6 +474,48 @@ export function useAdmin() {
     }
   }, [admin]);
 
+  const getStories = async () => {
+    const { data, error } = await supabase
+      .from('stories')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  };
+
+  const createStory = async (story: Omit<Story, 'id' | 'created_at' | 'admin_id'>) => {
+    const { data, error } = await supabase
+      .from('stories')
+      .insert([{ ...story }])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  };
+
+  const updateStory = async (id: string, updates: Partial<Story>) => {
+    const { data, error } = await supabase
+      .from('stories')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  };
+
+  const deleteStory = async (id: string) => {
+    const { error } = await supabase
+      .from('stories')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  };
+
   return {
     loading,
     getStats,
@@ -485,6 +528,10 @@ export function useAdmin() {
     markEventComplete,
     processEventPayouts,
     getPlatformFeeStats,
-    withdrawPlatformFees
+    withdrawPlatformFees,
+    getStories,
+    createStory,
+    updateStory,
+    deleteStory,
   };
 }

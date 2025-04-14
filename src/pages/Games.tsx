@@ -410,12 +410,12 @@ const Games: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#1a1b2e] pb-[72px]">
+    <div className="min-h-screen bg-[#F6F7FB] flex flex-col pb-[72px]">
       <Header title="Games" icon={<Gamepad2 className="w-6 h-6" />} showMenu={false} />
-
-      <div className="p-4 space-y-6">
-        <div className="flex items-center justify-between px-4 border-b border-white/10">
-          <div className="flex">
+      <div className="flex-1 flex flex-col items-center w-full">
+        <div className="w-full max-w-2xl mx-auto px-2 sm:px-4 py-4">
+          {/* Compact Tabs Bar */}
+          <div className="flex gap-1 mb-6 bg-white rounded-xl shadow-sm p-1 overflow-x-auto">
             {[
               { id: 'active', label: 'Active', icon: <Gamepad2 className="w-4 h-4" /> },
               { id: 'users', label: 'Users', icon: <Users className="w-4 h-4" /> },
@@ -425,72 +425,155 @@ const Games: React.FC = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                className={`px-3 py-2 flex items-center gap-1.5 font-medium text-sm transition-colors
-                  ${activeTab === tab.id
-                    ? 'text-[#7440ff] border-b-2 border-[#7440ff]'
-                    : 'text-white/60 hover:text-white'
-                  }`}
+                className={`flex items-center gap-2 px-3 py-1 rounded-md text-sm font-medium whitespace-nowrap transition-colors ${
+                  activeTab === tab.id
+                    ? 'bg-[#CCFF00] text-black shadow'
+                    : 'bg-transparent text-gray-700 hover:bg-gray-100'
+                }`}
+                style={{ minWidth: 0 }}
               >
                 {tab.icon}
-                <span>{tab.label}</span>
+                {tab.label}
               </button>
             ))}
+            <div className="flex items-center gap-2 ml-auto">
+              <button
+                onClick={() => setShowActiveModal(true)}
+                className="p-2 text-gray-500 hover:text-[#CCFF00] transition-colors"
+                title="Add New"
+              >
+                <Plus className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => navigate('/taxi-share')}
+                className="p-2 text-gray-500 hover:text-[#CCFF00] transition-colors"
+                title="Taxi Share Map"
+              >
+                <Map className="w-5 h-5" />
+              </button>
+            </div>
           </div>
-          
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowActiveModal(true)}
-              className="p-2 text-white/60 hover:text-[#CCFF00] transition-colors"
-              title="Add New"
-            >
-              <Plus className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => navigate('/taxi-share')}
-              className="p-2 text-white/60 hover:text-[#CCFF00] transition-colors"
-              title="Taxi Share Map"
-            >
-              <Map className="w-5 h-5" />
-            </button>
-          </div>
+
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#CCFF00]" />
+            </div>
+          ) : (
+            <>
+              {activeTab === 'users' && (
+                users.length > 0 ? (
+                  <div className="flex flex-col gap-4">
+                    {users.map((user) => (
+                      <div key={user.id} className="flex items-center bg-white rounded-2xl shadow-sm px-4 py-3 transition border border-transparent hover:border-[#CCFF00]/40 group">
+                        <div className="flex-shrink-0 w-12 h-12 rounded-full bg-[#F6F7FB] flex items-center justify-center mr-4 relative">
+                          <img src={user.avatar_url} alt={user.name} className="w-10 h-10 rounded-full object-cover" />
+                          <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white ${user.status === 'online' ? 'bg-[#CCFF00]' : 'bg-gray-400'}`}></span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-gray-900 truncate">{user.name}</span>
+                            <span className="text-sm text-gray-500">@{user.username}</span>
+                          </div>
+                          <div className="flex items-center gap-3 text-xs mt-1">
+                            <span className="flex items-center gap-1 text-gray-500">
+                              <Trophy className="w-3.5 h-3.5 text-[#CCFF00]" />
+                              {user.stats.challenges_won}
+                            </span>
+                            <span className="flex items-center gap-1 text-gray-500">
+                              <Zap className="w-3.5 h-3.5 text-[#CCFF00]" />
+                              {user.stats.challenges_created}
+                            </span>
+                            <span className="flex items-center gap-1 text-gray-500">
+                              <DollarSign className="w-3.5 h-3.5 text-[#CCFF00]" />
+                              ₦{user.stats.total_earnings.toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleChallenge(user)}
+                          className="flex-shrink-0 bg-[#CCFF00] text-black px-4 py-1.5 rounded-full text-sm font-medium hover:bg-opacity-90 transition-colors ml-4"
+                        >
+                          Challenge
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-16">
+                    <img src="/noti-lonely.svg" alt="No users" className="w-32 h-32 mb-4 opacity-80" />
+                    <p className="text-lg font-semibold text-gray-700 mb-1">No users found</p>
+                  </div>
+                )
+              )}
+              {activeTab !== 'users' && (
+                challenges.length > 0 ? (
+                  <div className="flex flex-col gap-4">
+                    {challenges.map((challenge) => (
+                      <div key={challenge.id} onClick={() => navigate(`/challenges/${challenge.id}`)} className="bg-white rounded-2xl shadow-sm px-4 py-3 transition border border-transparent hover:border-[#CCFF00]/40 cursor-pointer group flex flex-col gap-2">
+                        <div className="flex items-center justify-between mb-1">
+                          <h3 className="text-gray-900 font-semibold truncate">{challenge.title || 'Untitled Challenge'}</h3>
+                          <span className="text-[#CCFF00] font-semibold">₦{challenge.amount.toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <img src={challenge.challenger.avatar_url} alt={challenge.challenger.name} className="w-8 h-8 rounded-full object-cover" />
+                            <span className="text-gray-900 font-medium">{challenge.challenger.name}</span>
+                          </div>
+                          <span className="text-gray-400">vs</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-900 font-medium">{challenge.challenged.name}</span>
+                            <img src={challenge.challenged.avatar_url} alt={challenge.challenged.name} className="w-8 h-8 rounded-full object-cover" />
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="space-x-2 text-gray-500">
+                            <span>{challenge.game_type}</span>
+                            <span>•</span>
+                            <span>{challenge.platform}</span>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <span className="text-gray-400">
+                              {formatDate(challenge.scheduled_at || challenge.created_at)}
+                            </span>
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(challenge.status)}`}>
+                              {challenge.status}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-16">
+                    <img src="/noti-lonely.svg" alt="No challenges" className="w-32 h-32 mb-4 opacity-80" />
+                    <p className="text-lg font-semibold text-gray-700 mb-1">No {activeTab} challenges found</p>
+                  </div>
+                )
+              )}
+            </>
+          )}
+          {showChallengeModal && selectedUser && currentUser && (
+            <ChallengeModal
+              challengerId={currentUser.id}
+              challengedId={selectedUser.id}
+              challengedName={selectedUser.name}
+              challengedUsername={selectedUser.username}
+              challengedAvatar={selectedUser.avatar_url}
+              onClose={() => setShowChallengeModal(false)}
+              onSuccess={() => {
+                setShowChallengeModal(false);
+                setActiveTab('challenges' as any);
+              }}
+            />
+          )}
+          {showActiveModal && (
+            <ActiveContentModal
+              onClose={() => setShowActiveModal(false)}
+              content={renderActiveContent()}
+            />
+          )}
         </div>
-
-        {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#CCFF00]" />
-          </div>
-        ) : (
-          <>
-            {activeTab === 'users' && renderUsersList()}
-            {activeTab !== 'users' && (
-              challenges.length > 0 ? renderChallengesList() : renderEmptyState()
-            )}
-          </>
-        )}
       </div>
-
-      {showChallengeModal && selectedUser && currentUser && (
-        <ChallengeModal
-          challengerId={currentUser.id}
-          challengedId={selectedUser.id}
-          challengedName={selectedUser.name}
-          challengedUsername={selectedUser.username}
-          challengedAvatar={selectedUser.avatar_url}
-          onClose={() => setShowChallengeModal(false)}
-          onSuccess={() => {
-            setShowChallengeModal(false);
-            setActiveTab('challenges' as any);
-          }}
-        />
-      )}
-
-      {showActiveModal && (
-        <ActiveContentModal
-          onClose={() => setShowActiveModal(false)}
-          content={renderActiveContent()}
-        />
-      )}
-
       <MobileFooterNav />
     </div>
   );

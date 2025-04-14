@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trophy, Crown, Star, Sparkles, ArrowLeft } from 'lucide-react';
+import { Trophy, Crown, Star, Users, Wallet } from 'lucide-react';
 import MobileFooterNav from '../components/MobileFooterNav';
 import ProfileCard from '../components/ProfileCard';
 import { useLeaderboard } from '../hooks/useLeaderboard';
@@ -12,8 +12,8 @@ const Leaderboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-purple-500"></div>
+      <div className="min-h-screen bg-[#1a1b2e] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-[#CCFF00]"></div>
       </div>
     );
   }
@@ -21,13 +21,13 @@ const Leaderboard: React.FC = () => {
   const getRankStyle = (rank: number) => {
     switch (rank) {
       case 1:
-        return "bg-gradient-to-r from-yellow-200 to-yellow-100 text-yellow-700";
+        return "bg-[#CCFF00] text-black";
       case 2:
-        return "bg-gradient-to-r from-blue-200 to-blue-100 text-blue-700";
+        return "bg-[#7C3AED] text-white";
       case 3:
-        return "bg-gradient-to-r from-orange-200 to-orange-100 text-orange-700";
+        return "bg-[#242538] text-white";
       default:
-        return "bg-purple-100 text-purple-700";
+        return "bg-white/10 text-white/60";
     }
   };
 
@@ -39,74 +39,84 @@ const Leaderboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#1a1b2e]">
+    <div className="min-h-screen bg-[#1a1b2e] pb-20">
       <PageHeader title="Leaderboard" />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div className="max-w-3xl mx-auto px-4 py-6">
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
-            <div className="divide-y divide-gray-100">
-              {users.map((user) => (
-                <div
-                  key={user.id}
-                  onClick={() => setSelectedUserId(user.id)}
-                  className={`px-6 py-4 flex items-center hover:bg-gray-50 transition-all duration-200 cursor-pointer
-                    ${user.rank <= 3 ? 'hover:shadow-md' : ''}`}
-                >
-                  {/* Avatar with Rank Badge */}
-                  <div className="relative">
-                    <img
-                      src={user.avatar_url}
-                      alt={user.name}
-                      className={`w-12 h-12 rounded-full border-2 
-                        ${user.rank === 1 ? 'border-yellow-400' : 
-                          user.rank === 2 ? 'border-blue-400' : 
-                          user.rank === 3 ? 'border-orange-400' : 'border-gray-200'}`}
-                    />
-                    {/* Rank Badge */}
-                    <div className={`absolute -bottom-2 -left-2 w-6 h-6 flex items-center justify-center rounded-full font-bold text-sm shadow-md ${getRankStyle(user.rank)}`}>
-                      {user.rank}
-                    </div>
-                    {/* Crown for #1 */}
-                    {user.rank === 1 && (
-                      <div className="absolute -top-2 -right-2">
-                        <Crown className="w-5 h-5 text-yellow-500 animate-bounce" />
-                      </div>
-                    )}
-                  </div>
+      <div className="max-w-2xl mx-auto px-4 py-6">
+        {/* Time Filter Tabs */}
+        <div className="flex gap-2 mb-6 bg-[#242538] rounded-xl p-1">
+          {['all', 'weekly', 'monthly'].map((filter) => (
+            <button
+              key={filter}
+              onClick={() => setTimeFilter(filter as any)}
+              className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                timeFilter === filter 
+                  ? 'bg-primary text-white' 
+                  : 'text-white/60 hover:text-white'
+              }`}
+            >
+              {filter.charAt(0).toUpperCase() + filter.slice(1)}
+            </button>
+          ))}
+        </div>
 
-                  {/* Name and Achievements */}
-                  <div className="ml-4 flex-1">
-                    <h3 className="font-semibold text-gray-900">{user.name}</h3>
-                    <p className="text-gray-500 text-sm">@{user.username}</p>
-                    <div className="flex items-center gap-1 mt-1">
-                      {[...Array(getAchievementCount(user.events_won))].map((_, i) => (
-                        <Star key={i} className="w-4 h-4 text-purple-400 fill-purple-400" />
-                      ))}
-                    </div>
+        {/* Leaderboard List */}
+        <div className="space-y-3">
+          {users.map((user) => (
+            <div
+              key={user.id}
+              onClick={() => setSelectedUserId(user.id)}
+              className="bg-[#242538] rounded-xl p-4 cursor-pointer hover:bg-[#2a2b40] transition-colors"
+            >
+              <div className="flex items-center gap-4">
+                {/* Avatar and Rank */}
+                <div className="relative">
+                  <img
+                    src={user.avatar_url}
+                    alt={user.name}
+                    className="w-12 h-12 rounded-full border-2 border-[#1a1b2e]"
+                  />
+                  <div className={`absolute -bottom-1 -right-1 w-5 h-5 flex items-center justify-center rounded-full text-xs font-bold ${getRankStyle(user.rank)}`}>
+                    {user.rank}
                   </div>
+                  {user.rank === 1 && (
+                    <div className="absolute -top-1 -right-1">
+                      <Crown className="w-4 h-4 text-[#CCFF00]" />
+                    </div>
+                  )}
+                </div>
 
-                  {/* Stats */}
-                  <div className="flex items-center gap-6">
-                    <div className="text-center ">
-                      <p className="text-xs text-gray-500">Groups</p>
-                      <p className="font-bold text-gray-900">{user.groups_joined}</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xs text-gray-500">Wins</p>
-                      <p className="font-bold text-gray-900">{user.events_won}</p>
-                    </div>
-                    <div className="text-right min-w-[100px]">
-                      <p className="text-sm text-gray-500">Earnings</p>
-                      <p className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                        ₦{user.total_winnings.toLocaleString()}
-                      </p>
-                    </div>
+                {/* User Info */}
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-medium text-white">{user.name}</h3>
+                    <span className="text-sm text-white/60">@{user.username}</span>
+                  </div>
+                  <div className="flex items-center gap-3 mt-1">
+                    <span className="flex items-center gap-1 text-sm text-white/60">
+                      <Trophy className="w-3.5 h-3.5 text-[#CCFF00]" />
+                      {user.events_won}
+                    </span>
+                    <span className="flex items-center gap-1 text-sm text-white/60">
+                      <Users className="w-3.5 h-3.5 text-[#CCFF00]" />
+                      {user.groups_joined}
+                    </span>
+                    <span className="flex items-center gap-1 text-sm text-white/60">
+                      <Wallet className="w-3.5 h-3.5 text-[#CCFF00]" />
+                      ₦{user.total_winnings.toLocaleString()}
+                    </span>
                   </div>
                 </div>
-              ))}
+
+                {/* Achievement Stars */}
+                <div className="flex items-center gap-0.5">
+                  {[...Array(getAchievementCount(user.events_won))].map((_, i) => (
+                    <Star key={i} className="w-4 h-4 text-[#CCFF00] fill-[#CCFF00]" />
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
+          ))}
         </div>
       </div>
 

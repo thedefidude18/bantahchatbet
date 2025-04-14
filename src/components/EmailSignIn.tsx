@@ -88,12 +88,12 @@ const EmailSignIn: React.FC<EmailSignInProps> = ({ onClose }) => {
           </div>
         </div>
 
-        <button
+        <button 
           type="submit"
           disabled={loading}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium bg-[#CCFF00] text-black hover:bg-[#b3ff00] transition-colors mb-3 disabled:opacity-50"
+          className="btn-primary w-full flex items-center justify-center gap-2"
         >
-          {loading ? 'Signing in...' : 'Sign In'}
+          {loading ? 'Processing...' : 'Continue'}
           <ArrowRight className="w-5 h-5" />
         </button>
 
@@ -101,13 +101,13 @@ const EmailSignIn: React.FC<EmailSignInProps> = ({ onClose }) => {
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 px-4 py-3 rounded-xl font-medium bg-[#1a1b2e] text-white hover:bg-[#2f3049] transition-colors"
+            className="btn-secondary flex-1"
           >
             Cancel
           </button>
           <button
             type="button"
-            className="flex-1 px-4 py-3 rounded-xl font-medium text-[#CCFF00] hover:bg-[#1a1b2e] transition-colors"
+            className="btn-outline flex-1"
           >
             Forgot Password?
           </button>

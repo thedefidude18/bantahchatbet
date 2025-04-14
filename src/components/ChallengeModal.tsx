@@ -293,14 +293,23 @@ const ChallengeModal: React.FC<ChallengeModalProps> = ({
               </select>
             </div>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="col-span-2 bg-[#CCFF00] text-black py-2 rounded-xl font-semibold disabled:opacity-50 hover:bg-[#CCFF00]/90 transition-colors text-sm"
-            >
-              {loading ? <LoadingSpinner /> : 'Send Challenge'}
-            </button>
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading || !challengeData.amount}
+                className="btn-primary"
+              >
+                {loading ? <LoadingSpinner /> : 'Send Challenge'}
+              </button>
+            </div>
           </div>
         </form>
       </div>

@@ -8,6 +8,7 @@ export default {
         sans: ['Poppins', 'sans-serif'], // This makes Poppins the default font
       },
       colors: {
+        primary: '#7440FF',
         dark: {
           bg: '#000000',
           card: '#242538',

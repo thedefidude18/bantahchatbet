@@ -90,49 +90,39 @@ const Notifications = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#1a1b2e]">
+    <div className="min-h-screen bg-[#F6F7FB] flex flex-col">
       <PageHeader title="Notifications" />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-              <Bell className="w-6 h-6" />
-              Notifications
-            </h1>
-            <button
-              onClick={handleMarkAllRead}
-              className="px-4 py-2 bg-[#CCFF00] text-black rounded-lg"
-            >
-              Mark all as read
-            </button>
-          </div>
-
-          <div className="flex gap-4 mb-6">
+      <div className="flex-1 flex flex-col items-center w-full">
+        <div className="w-full max-w-2xl mx-auto px-2 sm:px-4 py-4">
+          {/* Compact Filter Bar */}
+          <div className="flex gap-1 mb-6 bg-white rounded-xl shadow-sm p-1 overflow-x-auto">
             {filters.map(filterOption => (
               <button
                 key={filterOption.id}
                 onClick={() => setFilter(filterOption.id)}
-                className={`px-4 py-2 rounded-lg ${
+                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
                   filter === filterOption.id
-                    ? 'bg-[#CCFF00] text-black'
-                    : 'bg-[#242538] text-white'
+                    ? 'bg-[#CCFF00] text-black shadow'
+                    : 'bg-transparent text-gray-700 hover:bg-gray-100'
                 }`}
+                style={{ minWidth: 0 }}
               >
                 {filterOption.label}
               </button>
             ))}
           </div>
 
+          {/* Notification List */}
           <div className="space-y-4">
             {loading ? (
-              <div className="bg-[#242538] rounded-lg p-6 text-center text-white">
+              <div className="flex flex-col items-center justify-center py-16">
                 <LoadingSpinner />
-                <p className="mt-2">Loading notifications...</p>
+                <p className="mt-4 text-gray-500 font-medium">Loading notifications...</p>
               </div>
             ) : filterNotifications.length === 0 ? (
-              <div className="bg-[#242538] rounded-lg p-6 text-center text-white">
-                <p className="text-lg mb-2">No notifications found</p>
+              <div className="flex flex-col items-center justify-center py-16">
+                <img src="/noti-lonely.svg" alt="No notifications" className="w-32 h-32 mb-4 opacity-80" />
+                <p className="text-lg font-semibold text-gray-700 mb-1">No notifications found</p>
                 <p className="text-sm text-gray-400">
                   {filter === 'all' 
                     ? "You don't have any notifications yet"
@@ -140,46 +130,72 @@ const Notifications = () => {
                 </p>
               </div>
             ) : (
-              filterNotifications.map(notification => (
-                <div
-                  key={notification.id}
-                  className={`bg-[#242538] rounded-lg p-4 ${
-                    !notification.read_at ? 'border-l-4 border-[#CCFF00]' : ''
-                  }`}
-                >
-                  <div className="flex justify-between items-start">
-                   
-
-                    <div className="text-white">
-                      <p className="font-medium">{notification.title}</p>
-                      <p className="text-gray-400">{notification.content}</p>
-                      <p className="text-sm text-gray-500 mt-2">
-                        {new Date(notification.created_at).toLocaleDateString()}
-                      </p>
+              <div className="flex flex-col gap-4">
+                {filterNotifications.map(notification => (
+                  <div
+                    key={notification.id}
+                    className={`flex items-center bg-white rounded-2xl shadow-sm px-4 py-3 transition border border-transparent hover:border-[#CCFF00]/40 relative group ${!notification.read_at ? 'ring-2 ring-[#CCFF00]/40' : ''}`}
+                  >
+                    {/* Icon/Avatar */}
+                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-[#F6F7FB] flex items-center justify-center mr-4">
+                      {notification.metadata?.banner_url ? (
+                        <img src={notification.metadata.banner_url} alt="Banner" className="w-10 h-10 object-cover rounded-full" />
+                      ) : (
+                        <Bell className="w-6 h-6 text-[#CCFF00]" />
+                      )}
                     </div>
-                     {notification.metadata?.banner_url && (
-                      <img
-                        src={notification.metadata.banner_url}
-                        alt="Event Banner"
-                        className="mt-2 rounded-md w-full h-40 object-cover"
-                      />
-                    )}
-                    {!notification.read_at && (
-                      <button
-                        onClick={() => handleMarkAsRead(notification.id)}
-                        className="px-3 py-1 bg-[#CCFF00] text-black rounded"
-                      >
-                        Mark as read
-                      </button>
-                    )}
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className={`font-semibold text-gray-900 truncate ${!notification.read_at ? 'font-bold' : ''}`}>{notification.title}</span>
+                        {!notification.read_at && <span className="w-2 h-2 bg-[#CCFF00] rounded-full inline-block" />}
+                      </div>
+                      <p className="text-gray-500 text-sm truncate">{notification.content}</p>
+                      {/* Challenge Accept/Decline Buttons */}
+                      {notification.notification_type && notification.notification_type.startsWith('challenge_') && !notification.read_at && (
+                        <div className="flex gap-2 mt-2">
+                          <button
+                            className="px-3 py-1 rounded-full bg-[#CCFF00] text-black text-xs font-semibold shadow hover:bg-[#b3ff00] transition"
+                            onClick={() => {/* Accept logic here (handled elsewhere) */}}
+                          >
+                            Accept
+                          </button>
+                          <button
+                            className="px-3 py-1 rounded-full bg-red-100 text-red-600 text-xs font-semibold shadow hover:bg-red-200 transition"
+                            onClick={() => {/* Decline logic here (handled elsewhere) */}}
+                          >
+                            Decline
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    {/* Time & Actions */}
+                    <div className="flex flex-col items-end ml-4 gap-2 min-w-[80px]">
+                      <span className="text-xs text-gray-400 whitespace-nowrap">{new Date(notification.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      {!notification.read_at && !notification.notification_type?.startsWith('challenge_') && (
+                        <button
+                          onClick={() => handleMarkAsRead(notification.id)}
+                          className="text-xs px-3 py-1 rounded-full bg-[#CCFF00] text-black font-medium shadow hover:bg-[#b3ff00] transition"
+                        >
+                          Mark as read
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
         </div>
+        {/* Floating Mark All as Read Button */}
+        <button
+          onClick={handleMarkAllRead}
+          className="fixed bottom-6 right-6 z-50 bg-[#CCFF00] text-black rounded-full shadow-lg w-14 h-14 flex items-center justify-center hover:bg-[#b3ff00] transition"
+          title="Mark all as read"
+        >
+          <Bell className="w-7 h-7" />
+        </button>
       </div>
-
       <MobileFooterNav />
     </div>
   );

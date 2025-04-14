@@ -120,13 +120,13 @@ const JoinRequestModal: React.FC<JoinRequestModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 text-sm border border-white/10 text-white rounded-lg hover:bg-white/5 transition-colors"
+              className="btn-secondary flex-1"
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
-              className="flex-1 px-4 py-2 text-sm bg-[#7C3AED] text-white rounded-lg hover:bg-[#6D35D3] transition-colors"
+              className="btn-primary flex-1"
             >
               Join Event
             </button>

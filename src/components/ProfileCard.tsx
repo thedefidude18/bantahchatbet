@@ -115,8 +115,8 @@ const ProfileCard: React.FC<ProfileCardProps> = ({ profile: initialProfile, user
             disabled={loadingFollow || loadingUnfollow}
             className={`w-full py-2 px-4 rounded-lg transition-colors ${
               profile.is_following
-                ? 'bg-white/10 hover:bg-white/20'
-                : 'bg-[#7C3AED] hover:bg-[#6025EA]'
+                ? 'btn-outline'
+                : 'btn-primary'
             }`}
           >
             {loadingFollow || loadingUnfollow ? (

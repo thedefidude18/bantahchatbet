@@ -19,6 +19,7 @@ import AdminReports from './pages/AdminReports';
 import AdminWithdrawals from './pages/AdminWithdrawals';
 import AdminAuditLog from './pages/AdminAuditLog';
 import AdminPlatformFees from './pages/AdminPlatformFees';
+import AdminStories from './pages/AdminStories';
 
 // User Pages
 import SignIn from './pages/SignIn';
@@ -31,6 +32,10 @@ import Create from './pages/Create';
 import Profile from './pages/Profile';
 import Help from './pages/Help';
 import Privacy from './pages/Privacy';
+import Messages from './pages/Messages';
+import Notifications from './pages/Notifications';
+import Leaderboard from './pages/Leaderboard';
+import Stories from './pages/Stories';
 
 // Components
 import PWAInstallPrompt from './components/PWAInstallPrompt';
@@ -52,9 +57,11 @@ const App: React.FC = () => {
                     <main className="lg:ml-[200px] flex-1">
                       <Routes>
                         {/* Public routes */}
+                        <Route path="/" element={<Events />} />
                         <Route path="/signin" element={<SignIn />} />
                         <Route path="/help" element={<Help />} />
                         <Route path="/privacy" element={<Privacy />} />
+                        <Route path="/stories" element={<Stories />} />
                         
                         {/* Admin routes */}
                         <Route path="/admin/login" element={<AdminLogin />} />
@@ -74,6 +81,8 @@ const App: React.FC = () => {
                             </AdminRoute>
                           }
                         />
+
+
                         <Route
                           path="/admin/reports"
                           element={
@@ -103,6 +112,14 @@ const App: React.FC = () => {
                           element={
                             <AdminRoute>
                               <AdminAuditLog />
+                            </AdminRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/stories"
+                          element={
+                            <AdminRoute>
+                              <AdminStories />
                             </AdminRoute>
                           }
                         />
@@ -147,6 +164,21 @@ const App: React.FC = () => {
                         <Route path="/profile" element={
                           <ProtectedRoute>
                             <Profile />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/messages" element={
+                          <ProtectedRoute>
+                            <Messages />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/notifications" element={
+                          <ProtectedRoute>
+                            <Notifications />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/leaderboard" element={
+                          <ProtectedRoute>
+                            <Leaderboard />
                           </ProtectedRoute>
                         } />
                       </Routes>

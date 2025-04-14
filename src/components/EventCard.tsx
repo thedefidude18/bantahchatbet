@@ -162,11 +162,11 @@ const EventCard: React.FC<EventCardProps> = ({ event, onChatClick }) => {
             disabled={['CANCELLED', 'ENDED'].includes(event.status || getEventStatus().label)}
             className={`${
               ['CANCELLED', 'ENDED'].includes(event.status || getEventStatus().label)
-                ? 'bg-gray-500 cursor-not-allowed'
-                : 'bg-[#CCFF00] hover:bg-[#B8E600]'
-            } text-black font-bold text-xl px-4 py-1.5 rounded-xl h-10 flex items-center justify-center gap-1`}
+                ? 'bg-gray-500 cursor-not-allowed text-white'
+                : 'btn-primary'
+            } h-10 flex items-center justify-center gap-1`}
           >
-            {event.is_private && <Lock className="h-4 w-4" />} {/* Reduced Lock icon size */}
+            {event.is_private && <Lock className="h-4 w-4" />}
             {['CANCELLED', 'ENDED'].includes(event.status || getEventStatus().label) ? 'Closed' : 'Join'}
           </button>
         </div>

@@ -147,21 +147,22 @@ const MyEvents = () => {
   );
 
   return (
-    <>
-      <div className="min-h-screen bg-[#1a1b2e]">
-        <PageHeader title="My Events" />
-        
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex gap-4 mb-6 overflow-x-auto">
+    <div className="min-h-screen bg-[#F6F7FB] flex flex-col">
+      <PageHeader title="My Events" />
+      <div className="flex-1 flex flex-col items-center w-full">
+        <div className="w-full max-w-2xl mx-auto px-2 sm:px-4 py-4">
+          {/* Compact Tabs Bar */}
+          <div className="flex gap-1 mb-6 bg-white rounded-xl shadow-sm p-1 overflow-x-auto">
             {tabs.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap ${
+                className={`flex items-center gap-2 px-3 py-1 rounded-md text-sm font-medium whitespace-nowrap transition-colors ${
                   activeTab === tab.id
-                    ? 'bg-[#CCFF00] text-black'
-                    : 'bg-[#242538] text-white'
+                    ? 'bg-[#CCFF00] text-black shadow'
+                    : 'bg-transparent text-gray-700 hover:bg-gray-100'
                 }`}
+                style={{ minWidth: 0 }}
               >
                 <tab.icon className="w-4 h-4" />
                 {tab.label}
@@ -176,8 +177,9 @@ const MyEvents = () => {
           ) : (
             <div className="space-y-4">
               {getFilteredEvents().length === 0 ? (
-                <div className="bg-[#242538] rounded-lg p-6 text-center text-white">
-                  <p className="text-lg mb-2">No events found</p>
+                <div className="flex flex-col items-center justify-center py-16">
+                  <img src="/noti-lonely.svg" alt="No events" className="w-32 h-32 mb-4 opacity-80" />
+                  <p className="text-lg font-semibold text-gray-700 mb-1">No events found</p>
                   <p className="text-sm text-gray-400">
                     {activeTab === 'created' 
                       ? "You haven't created any events yet" 
@@ -185,7 +187,91 @@ const MyEvents = () => {
                   </p>
                 </div>
               ) : (
-                getFilteredEvents().map(renderEventCard)
+                getFilteredEvents().map(event => (
+                  <div key={event.id} className="flex items-center bg-white rounded-2xl shadow-sm px-4 py-3 transition border border-transparent hover:border-[#CCFF00]/40 relative group">
+                    {/* Banner */}
+                    {event.banner_url && (
+                      <div className="flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden mr-4 bg-[#F6F7FB] flex items-center justify-center">
+                        <img 
+                          src={event.banner_url} 
+                          alt={event.title}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 
+                          className="text-base font-semibold text-gray-900 truncate cursor-pointer hover:text-[#CCFF00]"
+                          onClick={() => navigate(`/chat/${event.id}`)}
+                        >
+                          {event.title}
+                        </h3>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                          event.status === 'completed' 
+                            ? 'bg-green-500 text-white' 
+                            : 'bg-[#CCFF00] text-black'
+                        }`}>
+                          {event.status}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 mb-2">
+                        {activeTab !== 'created' && event.creator && (
+                          <div 
+                            className="flex items-center gap-1 cursor-pointer hover:text-[#CCFF00]"
+                            onClick={() => navigate(`/chat/${event.id}`)}
+                          >
+                            <Users className="w-3 h-3" />
+                            <span>By {event.creator.username}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          <span>{new Date(event.start_time).toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Users className="w-3 h-3" />
+                          <span>{event.participant_count?.count || 0}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs">
+                        <div className="bg-gray-100 px-2 py-1 rounded">
+                          <span className="text-[#CCFF00] font-semibold">₦ {Number(event.pool?.total_amount || 0).toLocaleString()}</span> Pool
+                        </div>
+                        {event.status === 'completed' && (
+                          <div className="bg-gray-100 px-2 py-1 rounded">
+                            <span className="text-[#CCFF00] font-semibold">
+                              ₦ {Number(event.user_earnings || 0).toLocaleString()}
+                            </span>
+                            {' '}
+                            {event.user_earnings > 0 ? 'Won' : 'Lost'}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {/* Actions */}
+                    <div className="flex flex-col gap-1 ml-4">
+                      <button
+                        onClick={() => navigate(`/chat/${event.id}`)}
+                        className="px-3 py-1 bg-[#CCFF00] text-black rounded-full text-xs font-medium whitespace-nowrap shadow hover:bg-[#b3ff00] transition"
+                      >
+                        Chat
+                      </button>
+                      {event.is_editable && event.status === 'active' && (
+                        <button
+                          onClick={() => {
+                            setSelectedEvent(event);
+                            setIsEditModalOpen(true);
+                          }}
+                          className="px-3 py-1 border border-[#CCFF00] text-gray-900 rounded-full text-xs font-medium whitespace-nowrap shadow hover:bg-[#f7ffe0] transition"
+                        >
+                          Edit
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))
               )}
             </div>
           )}
@@ -207,7 +293,7 @@ const MyEvents = () => {
         </div>
       </div>
       <MobileFooterNav />
-    </>
+    </div>
   );
 };
 

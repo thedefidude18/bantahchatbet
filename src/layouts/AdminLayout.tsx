@@ -7,7 +7,8 @@ import {
   Wallet,
   AlertCircle,
   Coins,
-  ClipboardList
+  ClipboardList,
+  Newspaper
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -27,6 +28,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const navigation = [
     { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'Events', href: '/admin/events', icon: Trophy },
+    { name: 'Stories', href: '/admin/stories', icon: Newspaper },
     { name: 'Reports', href: '/admin/reports', icon: AlertCircle },
     { name: 'Withdrawals', href: '/admin/withdrawals', icon: Wallet },
     { name: 'Platform Fees', href: '/admin/platform-fees', icon: Coins },

@@ -34,15 +34,21 @@ interface Event {
 const Events = () => {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const { events, loading } = useEvent();
+  const { events } = useEvent();
   const toast = useToast();
 
   const handleCategoryClick = (categoryId: string) => {
     if (categoryId === 'create') {
       navigate('/create');
+    } else if (categoryId === 'stories') {
+      navigate('/stories');
     } else {
       setSelectedCategory(categoryId);
     }
+  };
+
+  const handleChatClick = (event: any) => {
+    navigate(`/chat/${event.id}`);
   };
 
   const categories = [
@@ -54,11 +60,11 @@ const Events = () => {
       icon: <img src="/create.png" alt="Create Event" className="w-12 h-12" />
     },
     { 
-      id: 'all', 
-      label: 'All Events', 
+      id: 'stories', 
+      label: 'Stories', 
       gradient: 'from-[#A020F0] to-[#CCFF00]',
       bgColor: 'bg-[#2A1F0E]',
-      icon: <img src="/bantahblue.svg" alt="Create Event" className="w-10 h-10" />
+      icon: <img src="/news.svg" alt="Stories" className="w-8 h-8" />
     },
     { 
       id: 'pop culture', 
@@ -168,6 +174,7 @@ const Events = () => {
             <EventCard
               key={event.id}
               event={event}
+              onChatClick={handleChatClick}
             />
           ))}
         </div>
