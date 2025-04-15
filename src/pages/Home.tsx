@@ -5,6 +5,7 @@ import EventCard from '../components/EventCard';
 import CategoryButton from '../components/CategoryButton';
 import MobileFooterNav from '../components/MobileFooterNav';
 import Header from '../components/Header';
+import Logo from '../components/Logo';
 import { useEvent } from '../hooks/useEvent';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -57,7 +58,11 @@ function Home() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Header />
+      <Header>
+        <div className="flex items-center gap-2">
+          <Logo className="w-8 h-8" />
+        </div>
+      </Header>
       {/* Rest of your JSX */}
       <MobileFooterNav />
     </div>

@@ -64,12 +64,14 @@ const Header: React.FC<HeaderProps> = ({
   const isDarkMode = document.documentElement.classList.contains('dark');
 
   return (
-    <header className="sticky top-4 z-50 mx-4">
+    <header className="sticky top-0 z-50 bg-white bg-opacity-95 border-b border-gray-200 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Left Section */}
           <div className="flex items-center gap-4">
-            {/* Conditionally show back button or logo on mobile */}
+            {/* Logo always visible on left */}
+            <Logo className="w-8 h-8" />
+            {/* Conditionally show back button or title on mobile */}
             {isMobile && (
               <div className="flex items-center">
                 {showBackButton && (

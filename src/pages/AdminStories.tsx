@@ -60,22 +60,8 @@ const AdminStories = () => {
         const fileExt = formData.image.name.split('.').pop();
         const fileName = `${Math.random()}.${fileExt}`;
 
-        // First check if the bucket exists
-        const { data: buckets, error: bucketsError } = await supabase
-          .storage
-          .listBuckets();
-
-        if (bucketsError) {
-          console.error('Error checking buckets:', bucketsError);
-          throw new Error('Failed to access storage');
-        }
-
-        const storyImagesBucket = buckets.find(b => b.name === 'story-images');
-        if (!storyImagesBucket) {
-          throw new Error('Story images storage is not configured');
-        }
-
-        const { error: uploadError, data } = await supabase.storage
+        // Try to upload directly without checking bucket existence
+        const { error: uploadError } = await supabase.storage
           .from('story-images')
           .upload(fileName, formData.image, {
             cacheControl: '3600',
@@ -84,7 +70,7 @@ const AdminStories = () => {
 
         if (uploadError) {
           console.error('Error uploading file:', uploadError);
-          throw new Error('Failed to upload image');
+          throw new Error(uploadError.message || 'Failed to upload image');
         }
 
         const { data: { publicUrl } } = supabase.storage
