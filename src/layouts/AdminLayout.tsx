@@ -8,8 +8,10 @@ import {
   AlertCircle,
   Coins,
   ClipboardList,
-  Newspaper
+  Newspaper,
+  Plus
 } from 'lucide-react';
+import AdminMobileNav from '../components/AdminMobileNav';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -28,6 +30,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const navigation = [
     { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'Events', href: '/admin/events', icon: Trophy },
+    { name: 'Create Event', href: '/admin/create-event', icon: Plus },
     { name: 'Stories', href: '/admin/stories', icon: Newspaper },
     { name: 'Reports', href: '/admin/reports', icon: AlertCircle },
     { name: 'Withdrawals', href: '/admin/withdrawals', icon: Wallet },
@@ -82,6 +85,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         {children}
       </main>
+      <AdminMobileNav />
     </div>
   );
 };

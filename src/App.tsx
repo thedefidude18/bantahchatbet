@@ -20,6 +20,7 @@ import AdminWithdrawals from './pages/AdminWithdrawals';
 import AdminAuditLog from './pages/AdminAuditLog';
 import AdminPlatformFees from './pages/AdminPlatformFees';
 import AdminStories from './pages/AdminStories';
+import AdminCreateEvent from './pages/AdminCreateEvent'; // Fix import path
 
 // User Pages
 import SignIn from './pages/SignIn';
@@ -81,8 +82,6 @@ const App: React.FC = () => {
                             </AdminRoute>
                           }
                         />
-
-
                         <Route
                           path="/admin/reports"
                           element={
@@ -123,6 +122,11 @@ const App: React.FC = () => {
                             </AdminRoute>
                           }
                         />
+                        <Route path="/admin/create" element={
+                          <AdminRoute>
+                            <AdminCreateEvent />
+                          </AdminRoute>
+                        } />
 
                         {/* Protected routes */}
                         <Route 
