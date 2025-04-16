@@ -13,6 +13,7 @@ export interface Profile {
   followers_count: number;
   following_count: number;
   is_following?: boolean;
+  points: number; // Add points field
   stats?: {
     events_won: number;
     events_participated: number;
@@ -32,27 +33,37 @@ export function useProfile() {
       setLoadingProfile(true);
 
       // Fetch profile using the RPC function
-      const { data, error } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .rpc('get_profile_by_identifier', { p_username: identifier })
         .single();
 
-      if (error) throw error;
-      if (!data) {
+      if (profileError) throw profileError;
+      if (!profileData) {
         toast.showError('Profile not found');
         return null;
       }
-      
+
+      // Fetch user details including reputation_score directly from users table
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id, name, username, avatar_url, bio, reputation_score') // Fetch reputation_score
+        .eq('id', profileData.user_id)
+        .single();
+
+      if (userError) throw new Error('Error fetching user data: ' + userError.message);
+      if (!userData) throw new Error('User data not found for profile');
 
       // Map the explicit column names back to our interface
       const profile: Profile = {
-        id: data.user_id,
-        name: data.user_name || '',
-        username: data.user_username || '',
-        avatar_url: data.user_avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user_id}`,
-        bio: data.user_bio,
-        followers_count: data.user_followers_count || 0,
-        following_count: data.user_following_count || 0,
-        is_following: data.user_is_following || false
+        id: userData.id,
+        name: userData.name || '',
+        username: userData.username || '',
+        avatar_url: userData.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.id}`,
+        bio: userData.bio,
+        followers_count: profileData.user_followers_count || 0,
+        following_count: profileData.user_following_count || 0,
+        is_following: profileData.user_is_following || false,
+        points: userData.reputation_score || 0, // Assign reputation_score to points
       };
 
       // Ensure user stats exist and fetch them
@@ -113,7 +124,7 @@ export function useProfile() {
           user_id: userId,
           type: 'follow',
           title: 'New Follower',
-          content: `${currentUser.name} started following you`,
+          content: `${currentUser?.name || 'Someone'} started following you`,
           metadata: {
             follower_id: followerId
           }

@@ -185,6 +185,13 @@ const App: React.FC = () => {
                             <Leaderboard />
                           </ProtectedRoute>
                         } />
+                         <Route path="/event/:eventId/chat" element={
+                          <ProtectedRoute>
+                            <div>
+                            Event Chat
+                            </div>
+                          </ProtectedRoute>
+                        } />
                       </Routes>
                       <PWAInstallPrompt />
                     </main>

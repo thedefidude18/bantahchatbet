@@ -18,7 +18,9 @@ export function useLeaderboard() {
 
   const fetchLeaderboard = useCallback(async () => {
     try {
-      // First, get all users with their event participation
+      setLoading(true);
+
+      // 1. Fetch all users with their event participation
       const { data: usersData, error: usersError } = await supabase
         .from('users')
         .select(`
@@ -37,13 +39,14 @@ export function useLeaderboard() {
 
       if (usersError) throw usersError;
 
-      // For chat participants, use a count query
+      // 2. Fetch chat counts for each user using a direct query
       const { data: chatData, error: chatError } = await supabase
-        .rpc('count_user_chats', { }) // Create this function if it doesn't exist
-        .select('user_id, count');
+        .from('chat_participants')
+        .select('user_id, count(*)')
+        .groupBy('user_id');
 
       if (chatError) {
-        console.warn('Error fetching chat participants:', chatError);
+        console.error('Error fetching chat participants:', chatError);
       }
 
       // Create a map of user_id to chat count
