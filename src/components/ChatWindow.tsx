@@ -1,353 +1,328 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, ArrowLeft, Phone, Video } from 'lucide-react';
+import { Send, ArrowLeft } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import UserAvatar from './UserAvatar';
 import LoadingSpinner from './LoadingSpinner';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
 
 interface Message {
- id: string;
- content: string;
- created_at: string;
- sender_id: string;
- chat_id: string;
- sender: {
-  id: string;
-  name: string;
-  username: string;
-  avatar_url?: string;
- };
+    id: string;
+    content: string;
+    created_at: string;
+    sender_id: string;
+    chat_id: string;
+    sender: {
+        id: string;
+        name: string;
+        username: string;
+        avatar_url?: string;
+    };
 }
 
-interface Chat {
- id: string;
- event_id: string | null;
- type: string;
- created_at: string;
- participants: { user_id: string }[];
- event?: {
-  title: string;
-  creator_id: string;
-  end_time: string;
-  pool_amount: number;
- };
+interface OtherUser {
+    id: string;
+    name: string;
+    username: string;
+    avatar_url?: string;
 }
 
 interface ChatWindowProps {
- onNewMessageSent: () => void;
+    onNewMessageSent?: () => void;
+    userId: string; // Ensure userId prop is required
 }
 
-const ChatWindow: React.FC<ChatWindowProps> = ({ onNewMessageSent }) => {
- const { userId } = useParams<{ userId: string }>();
- const { currentUser } = useAuth();
- const [messages, setMessages] = useState<Message[]>([]);
- const [message, setMessage] = useState('');
- const [loading, setLoading] = useState(true);
- const messagesEndRef = useRef<HTMLDivElement>(null);
- const [otherUser, setOtherUser] = useState<any>(null);
- const [showProfile, setShowProfile] = useState(false);
- const navigate = useNavigate();
+const ChatWindow: React.FC<ChatWindowProps> = ({ onNewMessageSent, userId: otherUserId }) => {
+    const { currentUser } = useAuth();
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [message, setMessage] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [chatId, setChatId] = useState<string | null>(null);
+    const [otherUser, setOtherUser] = useState<OtherUser | null>(null);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const navigate = useNavigate();
 
- const fetchMessages = async () => {
-  try {
-   if (!userId) {
-    setLoading(false);
-    return;
-   }
+    // --- Function to find or create chat ID (Direct Supabase Query) ---
+    const findOrCreateChat = async (currentUserId: string, otherUserId: string): Promise<string | null> => {
+        try {
+            // 1. Check if a chat already exists between the two users
+            const { data: existingChats, error: existingChatsError } = await supabase
+                .from('chat_participants')
+                .select('chat_id')
+                .in('user_id', [currentUserId, otherUserId]) // Both users are participants
+                .limit(2) // Should only return a maximum of two rows for a 1:1 chat
 
-   //Fetch Chat Id from chat_participants table.
-   const { data: chatParticipantData, error: chatParticipantError } = await supabase
-    .from('chat_participants')
-    .select('chat_id')
-    .eq('user_id', currentUser.id)
+            if (existingChatsError) {
+                console.error('Error checking for existing chats:', existingChatsError);
+                return null;
+            }
 
+            if (existingChats && existingChats.length > 0) {
+                // Check both users exist as participants of a same chat
+                const existingChatIds = existingChats.map(chat => chat.chat_id);
+                for (const chatId of existingChatIds) {
+                    const { data: participants, error: participantsError } = await supabase
+                        .from('chat_participants')
+                        .select('user_id')
+                        .eq('chat_id', chatId);
 
+                    if (participantsError) {
+                        console.error('Error fetching participants:', participantsError);
+                        continue;
+                    }
 
-   if (chatParticipantError) throw chatParticipantError
+                    const userIds = participants.map(p => p.user_id);
+                    if (userIds.includes(currentUserId) && userIds.includes(otherUserId)) {
+                        return chatId;
+                    }
+                }
+            }
 
-   const chatId = chatParticipantData[0]?.chat_id;
+            // 2. If no chat exists, create a new one
+            const { data: newChat, error: newChatError } = await supabase
+                .from('chats')
+                .insert([{ /* You might have initial chat data here */ }])
+                .select('id') // Select the new chat ID
+                .single();
 
-   const { data: messagesData, error: messagesError } = await supabase
-    .from('messages')
-    .select(`
-     *,
-     sender:users_view(id, name, username, avatar_url)
-    `)
-    .eq('chat_id', chatId)
-    .order('created_at', { ascending: true });
+            if (newChatError) {
+                console.error('Error creating new chat:', newChatError);
+                return null;
+            }
 
-   if (messagesError) throw messagesError;
-   setMessages(messagesData || []);
-  } catch (error) {
-   console.error('Error loading messages:', error);
-  } finally {
-   setLoading(false);
-   scrollToBottom()
-  }
- };
+            const newChatId = newChat.id;
 
- useEffect(() => {
-  const fetchChatAndParticipants = async () => {
-   try {
-    if (!userId) return;
-    //Fetch Chat Id from chat_participants table.
-    const { data: chatParticipantData, error: chatParticipantError } = await supabase
-     .from('chat_participants')
-     .select('chat_id')
-     .eq('user_id', currentUser.id)
+            // 3. Add both users as participants in the new chat
+            const { error: addParticipantsError } = await supabase
+                .from('chat_participants')
+                .insert([
+                    { chat_id: newChatId, user_id: currentUserId },
+                    { chat_id: newChatId, user_id: otherUserId },
+                ]);
 
+            if (addParticipantsError) {
+                console.error('Error adding participants to new chat:', addParticipantsError);
+                return null;
+            }
 
-
-    if (chatParticipantError) throw chatParticipantError
-
-    const chatId = chatParticipantData[0]?.chat_id;
-
-
-    const {
-     data: chatData,
-     error: chatError,
-    }: {
-     data: Chat | null;
-     error: any;
-    } = await supabase
-     .from('chats')
-     .select(`
-      id,
-      event_id,
-      type,
-      created_at
-     `)
-     .eq('id', chatId)
-     .single();
-
-    if (chatError) throw chatError;
-
-     const { data: participantData, error: participantError } = await supabase
-      .from('chat_participants')
-      .select('user_id')
-      .eq('chat_id', chatId)
-      .neq('user_id', currentUser?.id)
-      .single()
-
-    if(participantError) throw participantError;
-
-    const otherParticipantId = participantData?.user_id;
-
-     if (otherParticipantId) {
-      const { data: userData, error: userError } = await supabase
-       .from('users_view')
-       .select('*')
-       .eq('id', otherParticipantId)
-       .single();
-
-      if (userError) throw userError;
-      setOtherUser(userData);
-     }
-
-   } catch (error) {
-    console.error('Error fetching chat details or participants:', error);
-   } finally {
-    setLoading(false);
-   }
-  };
-
-  if (userId && currentUser) {
-   fetchMessages();
-   fetchChatAndParticipants();
-  }
- }, [userId, currentUser]);
-
- const scrollToBottom = () => {
-  messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
- };
-
- useEffect(scrollToBottom, [messages]);
- const formatTimestamp = (dateString: string) => {
-  try {
-   const date = new Date(dateString);
-   return format(date, "EEEE p");
-  } catch {
-   return "Invalid date";
-  }
- };
-
- const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (message.trim() && currentUser && userId) {
-   try {
-    //Fetch Chat Id from chat_participants table.
-    const { data: chatParticipantData, error: chatParticipantError } = await supabase
-     .from('chat_participants')
-     .select('chat_id')
-     .eq('user_id', currentUser.id)
-
-
-
-    if (chatParticipantError) throw chatParticipantError
-
-    const chatId = chatParticipantData[0]?.chat_id;
-    const { error } = await supabase
-     .from('messages')
-     .insert([
-      {
-       chat_id: chatId,
-       sender_id: currentUser.id,
-       content: message.trim(),
-      },
-     ]);
-
-    if (error) throw error;
-    setMessage('');
-    fetchMessages();
-    onNewMessageSent();
-   } catch (error) {
-    console.error('Error sending message:', error);
-   }
-  }
- };
-
- const chatHeader = () => {
-  if (loading) {
-   return <div className="flex items-center justify-center w-full h-16"><LoadingSpinner /></div>;
-  }
-
-  if (otherUser) {
-   return (
-    <div className="flex items-center justify-between p-4">
-     <div className="flex items-center">
-      <button onClick={() => navigate(-1)} className="text-black mr-2">
-       <ArrowLeft className="h-6 w-6" />
-      </button>
-      <UserAvatar src={otherUser.avatar_url || '/default-avatar.png'} alt={otherUser.username} size="md" />
-      <div className="ml-2">
-       <h6 className="font-semibold text-black">{otherUser.name}</h6>
-       <p className="text-xs text-gray-500">Online</p>
-      </div>
-     </div>
-     <div className="flex items-center">
-      <button className="text-gray-600 hover:text-gray-800 mr-2">
-       <Phone className="h-5 w-5" />
-      </button>
-      <button className="text-gray-600 hover:text-gray-800">
-       <Video className="h-5 w-5" />
-      </button>
-     </div>
-    </div>
-   );
-  }
-  return <h2 className="font-semibold text-white">Chat</h2>;
- };
-
- return (
-  <div className="flex flex-col h-screen bg-[#F3F3F3]"> {/* Light Gray Background */}
-   {/* Top Bar */}
-   <div className="bg-[#673AB7] p-3 flex items-center shadow-sm z-10"> {/* White */}
-    {chatHeader()}
-   </div>
-
-   {/* Chat Messages Area */}
-   <div className="flex-grow overflow-y-auto p-3 space-y-2">
-    {loading && (
-     <div className="flex justify-center items-center py-10">
-      <LoadingSpinner />
-     </div>
-    )}
-    {!loading &&
-     messages.map((msg) => {
-      const isCurrentUserSender = msg.sender_id === currentUser?.id;
-      const messageAlignment = isCurrentUserSender ? 'self-end items-end' : 'self-start items-start';
-      const messageBg = isCurrentUserSender ? 'bg-[#DCF8C6]' : 'bg-gray-100';
-      const textColor =  '#212121'; // Dark Gray text
-      const borderRadius = isCurrentUserSender ? 'border-bottom-right-radius: 0rem; border-bottom-left-radius: 0.5rem;' : 'border-bottom-right-radius: 0.5rem; border-bottom-left-radius: 0rem;';
-
-      return (
-       <div
-        key={msg.id}
-        className={`flex flex-col w-fit max-w-[80%] ${messageAlignment}`}
-       >
-        <div
-         className={`rounded-lg p-2 shadow-sm text-sm ${messageBg}`}
-         style={{ borderRadius }}
-        >
-         {!isCurrentUserSender && msg.sender?.username && (
-          <span className="font-semibold text-[#5E35B1] block mb-0.5">{msg.sender.username}</span>
-         )}
-         <p className={`text-[${textColor}] break-words`}>{msg.content}</p>
-         <span className="text-xs text-gray-500 self-end mt-0.5">{formatTimestamp(msg.created_at)}</span>
-        </div>
-       </div>
-      );
-     })}
-    <div ref={messagesEndRef} />
-   </div>
-
-   {/* Input Area */}
-   <form onSubmit={handleSubmit} className="bg-white p-3 border-t border-gray-200 flex items-center gap-3 sticky bottom-0">
-    <input
-     type="text"
-     value={message}
-     onChange={(e) => setMessage(e.target.value)}
-     placeholder="Start a message"
-     className="flex-grow p-2.5 bg-gray-100 rounded-full focus:outline-none focus:ring-1 focus:ring-purple-400 text-sm px-4"
-    />
-    <button
-     type="submit"
-     disabled={!message.trim() || loading}
-     className="ml-3 p-2 bg-gradient-to-r from-[#6A0DAD] to-[#A020F0] text-white rounded-full disabled:opacity-50 transition-opacity hover:opacity-90 flex items-center justify-center w-10 h-10"
-    >
-     <Send size={20} />
-    </button>
-   </form>
-
-   {/* Subscribe to new messages (moved to the end to ensure rendering) */}
-   {userId && (
-    <ChatSubscription
-     chatId={userId}
-     onNewMessage={(newMessage: Message) => {
-      setMessages(prev => [...prev, newMessage]);
-      scrollToBottom();
-     }}
-    />
-   )}
-  </div>
- );
-};
-
-interface ChatSubscriptionProps {
-  chatId: string;
-  onNewMessage: (message: Message) => void;
-}
-
-const ChatSubscription: React.FC<ChatSubscriptionProps> = ({ chatId, onNewMessage }) => {
-  const subscription = useRef<any>(null);
-
-  useEffect(() => {
-    if (chatId) {
-      subscription.current = supabase
-        .channel(`chat:${chatId}`)
-        .on('postgres_changes', {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `chat_id=eq.${chatId}`,
-        }, payload => {
-          if (payload.new) {
-            onNewMessage(payload.new as Message);
-          }
-        })
-        .subscribe();
-
-      return () => {
-        if (subscription.current) {
-          supabase.removeChannel(subscription.current);
+            return newChatId;
+        } catch (error) {
+            console.error('Error finding or creating chat:', error);
+            return null;
         }
-      };
-    }
-  }, [chatId, onNewMessage]);
+    };
 
-  return null; // This component doesn't render anything
+    useEffect(() => {
+        const initializeChat = async () => {
+            if (!currentUser || !otherUserId) return;
+
+            setLoading(true);
+            try {
+                const { data: userData, error: userError } = await supabase
+                    .from('users_view')
+                    .select('id, name, username, avatar_url')
+                    .eq('id', otherUserId)
+                    .single();
+
+                if (userError) throw new Error(`Error fetching user details: ${userError.message}`);
+                if (!userData) throw new Error('Other user not found.');
+                setOtherUser(userData as OtherUser);
+
+                const foundChatId = await findOrCreateChat(currentUser.id, otherUserId);
+                if (!foundChatId) {
+                    console.error('Could not find or create chat ID');
+                    setLoading(false);
+                    return;
+                }
+                setChatId(foundChatId);
+
+                const { data: messagesData, error: messagesError } = await supabase
+                    .from('messages')
+                    .select(`
+            id, content, created_at, sender_id, chat_id,
+            sender:users_view(id, name, username, avatar_url)
+          `)
+                    .eq('chat_id', foundChatId)
+                    .order('created_at', { ascending: true });
+
+                if (messagesError) throw new Error(`Error loading messages: ${messagesError.message}`);
+                setMessages(messagesData || []);
+            } catch (error) {
+                console.error('Error initializing chat window:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        initializeChat();
+    }, [currentUser, otherUserId]);
+
+    const scrollToBottom = () => {
+        requestAnimationFrame(() => {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        });
+    };
+
+    useEffect(() => {
+        if (!loading) {
+            scrollToBottom();
+        }
+    }, [messages, loading]);
+
+    const formatTimestamp = (dateString: string) => {
+        try {
+            const date = new Date(dateString);
+            return format(date, 'p');
+        } catch {
+            return 'Invalid date';
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const trimmedMessage = message.trim();
+
+        if (!trimmedMessage || !currentUser || !chatId) {
+            console.warn("Cannot send message:", { trimmedMessage, currentUser, chatId });
+            return;
+        }
+
+        const optimisticMessage: Message = {
+            id: `temp-${Date.now()}`,
+            content: trimmedMessage,
+            created_at: new Date().toISOString(),
+            sender_id: currentUser.id,
+            chat_id: chatId,
+            sender: {
+                id: currentUser.id,
+                name: currentUser.user_metadata?.name || 'You',
+                username: currentUser.user_metadata?.username || 'you',
+                avatar_url: currentUser.user_metadata?.avatar_url,
+            },
+        };
+        setMessages(prev => [...prev, optimisticMessage]);
+        setMessage('');
+        scrollToBottom();
+
+        try {
+            const { error } = await supabase
+                .from('messages')
+                .insert([{
+                    chat_id: chatId,
+                    sender_id: currentUser.id,
+                    content: trimmedMessage,
+                }]);
+
+            if (error) {
+                console.error('Error sending message:', error);
+                setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
+                setMessage(trimmedMessage);
+                return;
+            }
+
+            onNewMessageSent?.();
+        } catch (error) {
+            console.error('Error sending message:', error);
+            setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
+            setMessage(trimmedMessage);
+        }
+    };
+
+    // --- Chat Header ---
+    const chatHeader = () => {
+        if (loading && !otherUser) {
+            return <div className="flex items-center justify-center w-full h-16"><LoadingSpinner size="sm" /></div>;
+        }
+
+        if (otherUser) {
+            return (
+                <div className="bg-white h-16 px-4 py-3 flex items-center shadow-md">
+                    <button onClick={() => navigate('/messages')} className="mr-2">
+                        <ArrowLeft className="h-6 w-6 text-gray-500" />
+                    </button>
+                    <div className="flex items-center">
+                        <UserAvatar src={otherUser.avatar_url || '/avatar.svg'} alt={otherUser.username} size="sm" className="mr-2" />
+                        <div>
+                            <h6 className="font-semibold text-gray-800">{otherUser.name}</h6>
+                            {/* Add Online Status here if available */}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+        return (
+            <div className="bg-white shadow-md p-3">
+                <button onClick={() => navigate('/messages')} className="mr-2">
+                    <ArrowLeft className="h-6 w-6 text-gray-500" />
+                </button>
+                {/* Add Loading State here */}
+            </div>
+        );
+    };
+
+    return (
+        <div className="flex flex-col h-screen bg-gray-50">
+            {chatHeader()}
+            <div className="flex-grow overflow-y-auto px-4 py-2 space-y-2">
+                {loading && messages.length === 0 && (
+                    <div className="flex justify-center items-center h-full">
+                        <LoadingSpinner />
+                    </div>
+                )}
+                {!loading && messages.length === 0 && (
+                    <div className="flex justify-center items-center h-full">
+                        <p className="text-gray-500">No messages yet. Start the conversation!</p>
+                    </div>
+                )}
+                {messages.map(msg => {
+                    const isCurrentUserSender = msg.sender_id === currentUser?.id;
+                    const messageAlignment = isCurrentUserSender ? 'self-end items-end' : 'self-start items-start';
+                    const messageBgColor = isCurrentUserSender ? 'bg-green-100 rounded-xl' : 'bg-white rounded-xl';
+                    const messageTextColor = 'text-gray-700'; // Ensure consistent text color
+                    const avatarDisplay = !isCurrentUserSender ? 'block' : 'hidden';
+                    const messageMaxWidth = 'max-w-[75%]' // Restrict Message bubble width
+
+                    return (
+                        <div key={msg.id} className={`flex flex-col ${messageAlignment}`}>
+                            <div className={`flex items-end space-x-2 ${messageAlignment}`}>
+                                {/* Conditionally render avatar for received messages */}
+                                <div className={`w-6 h-6 rounded-full overflow-hidden ${avatarDisplay}`}>
+                                    <img
+                                        src={msg.sender.avatar_url || '/avatar.svg'}
+                                        alt={msg.sender.username}
+                                        className="w-full h-full object-cover"
+                                    />
+                                </div>
+
+                                <div className={`px-3 py-2 ${messageMaxWidth} ${messageBgColor} ${messageTextColor} rounded-xl shadow-sm relative`}>
+                                    <p className="text-sm break-words">{msg.content}</p>
+                                    <span className="absolute text-xs text-gray-500 bottom-1 right-2">{formatTimestamp(msg.created_at)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+                <div ref={messagesEndRef} />
+            </div>
+            <form onSubmit={handleSubmit} className="bg-gray-100 px-4 py-3 border-t border-gray-200 flex items-center">
+                <input
+                    type="text"
+                    value={message}
+                    onChange={e => setMessage(e.target.value)}
+                    placeholder="Type a message..."
+                    className="flex-grow p-2 bg-white rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm"
+                />
+                <button
+                    type="submit"
+                    disabled={!message.trim() || loading || !chatId}
+                    className="ml-2 p-2 bg-blue-500 text-white rounded-full disabled:opacity-50 transition-opacity hover:opacity-90"
+                >
+                    <Send size={16} />
+                </button>
+            </form>
+        </div>
+    );
 };
 
 export default ChatWindow;
